@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API for Solar PV System Dimensioning
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: sfv
+    description: Solar PV Dimensioning
 paths:
   /healthz:
     get:
@@ -24,6 +25,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /sfv/calcular:
+    post:
+      operationId: calcularSFV
+      tags: [sfv]
+      summary: Calcular dimensionamiento del sistema fotovoltaico
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SFVInput"
+      responses:
+        "200":
+          description: Resultados del dimensionamiento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SFVResultado"
+        "400":
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +61,227 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Carga:
+      type: object
+      properties:
+        elemento:
+          type: string
+        tipoCarga:
+          type: string
+          enum: [AC, DC]
+        cantidad:
+          type: integer
+        potencia:
+          type: number
+        horas:
+          type: number
+      required:
+        - elemento
+        - tipoCarga
+        - cantidad
+        - potencia
+        - horas
+
+    RegistroRecibo:
+      type: object
+      properties:
+        consumo:
+          type: number
+        precio:
+          type: number
+      required:
+        - consumo
+        - precio
+
+    SFVInput:
+      type: object
+      properties:
+        latitud:
+          type: number
+        longitud:
+          type: number
+        hsp:
+          type: number
+        tipoSistema:
+          type: string
+          enum: ["aislado", "interconectado", "bombeo"]
+        metodoPerfil:
+          type: string
+          enum: ["cargas", "recibo"]
+        cargas:
+          type: array
+          items:
+            $ref: "#/components/schemas/Carga"
+        registrosRecibo:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegistroRecibo"
+        diasPeriodoRecibo:
+          type: integer
+        panelVnom:
+          type: number
+        panelPotencia:
+          type: number
+        panelImp:
+          type: number
+        panelVmp:
+          type: number
+        panelIsc:
+          type: number
+        panelVoc:
+          type: number
+        tipoBateria:
+          type: string
+          enum: ["Plomo", "Litio"]
+        diasAutonomia:
+          type: number
+      required:
+        - latitud
+        - longitud
+        - hsp
+        - tipoSistema
+        - metodoPerfil
+        - panelVnom
+        - panelPotencia
+        - panelImp
+        - panelVmp
+        - panelIsc
+        - panelVoc
+
+    ResultadoPaneles:
+      type: object
+      properties:
+        totalPaneles:
+          type: integer
+        panelesSerie:
+          type: integer
+        panelesParalelo:
+          type: integer
+        voltajeSistema:
+          type: number
+        corrienteSistema:
+          type: number
+      required:
+        - totalPaneles
+        - panelesSerie
+        - panelesParalelo
+        - voltajeSistema
+        - corrienteSistema
+
+    ResultadoBaterias:
+      type: object
+      properties:
+        totalBaterias:
+          type: integer
+        bateriasSerie:
+          type: integer
+        bateriasParalelo:
+          type: integer
+        capacidadNominal:
+          type: number
+        capacidadComercial:
+          type: number
+        voltajeBateria:
+          type: number
+        dod:
+          type: number
+      required:
+        - totalBaterias
+        - bateriasSerie
+        - bateriasParalelo
+        - capacidadNominal
+        - capacidadComercial
+        - voltajeBateria
+        - dod
+
+    ResultadoInversor:
+      type: object
+      properties:
+        corrienteMinima:
+          type: number
+      required:
+        - corrienteMinima
+
+    ResultadoRegulador:
+      type: object
+      properties:
+        corrienteMinima:
+          type: number
+      required:
+        - corrienteMinima
+
+    ResultadoCableado:
+      type: object
+      properties:
+        corrienteMinima:
+          type: number
+      required:
+        - corrienteMinima
+
+    ResultadoProtecciones:
+      type: object
+      properties:
+        corrienteFusible:
+          type: number
+      required:
+        - corrienteFusible
+
+    ResultadoAmbiental:
+      type: object
+      properties:
+        energiaAnualKwh:
+          type: number
+        ahorroCo2PrimerAnio:
+          type: number
+        ahorroCo2TotalTon:
+          type: number
+        vectorAhorrosCo2:
+          type: array
+          items:
+            type: number
+        vectorDegradacion:
+          type: array
+          items:
+            type: number
+      required:
+        - energiaAnualKwh
+        - ahorroCo2PrimerAnio
+        - ahorroCo2TotalTon
+        - vectorAhorrosCo2
+        - vectorDegradacion
+
+    SFVResultado:
+      type: object
+      properties:
+        energiaDiariaKwh:
+          type: number
+        potenciaDemandaKw:
+          type: number
+        paneles:
+          $ref: "#/components/schemas/ResultadoPaneles"
+        baterias:
+          $ref: "#/components/schemas/ResultadoBaterias"
+        inversor:
+          $ref: "#/components/schemas/ResultadoInversor"
+        regulador:
+          $ref: "#/components/schemas/ResultadoRegulador"
+        cableado:
+          $ref: "#/components/schemas/ResultadoCableado"
+        protecciones:
+          $ref: "#/components/schemas/ResultadoProtecciones"
+        ambiental:
+          $ref: "#/components/schemas/ResultadoAmbiental"
+      required:
+        - energiaDiariaKwh
+        - potenciaDemandaKw
+        - paneles
+        - cableado
+        - ambiental

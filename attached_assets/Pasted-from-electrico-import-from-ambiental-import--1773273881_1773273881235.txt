@@ -1,0 +1,233 @@
+from electrico import *
+from ambiental import *
+
+
+#================================================TEORIA SOLAR===================================================
+print("CONSIDERACIONES GEOGRÁFICAS")
+print("\nAntes de comenzar con el dimensionamiento, es necesario ingresar los datos de localización geográfica " \
+"donde se instalará el sistema, así como valores de condiciones climáticas del sitio:")
+
+#Ingreso de coordenadas
+latitud=input("Ingrese el valor de la latitud: ")
+longitud=input("Ingrese el valor de la longitud: ")
+#Si estamos en el hemisferio norte, orientar al sur y viceversa
+#Inclinación (beta) optima de acuerdo al IDAE (Instituto para la diversificación) menciona que para periodos de uso anuales, será igual a la latitud-10° *revisar*
+
+ 
+#Determinar HSP
+ingreso_HSP = input("Determine las horas solar pico (HSP) del sitio, ¿Cómo desea ingresar las HSP? Escriba el número:\n"
+    " 1) Manual\n"
+    " 2) Listado por estado\n"
+    "Selección: ")
+
+if ingreso_HSP == "1":
+
+    hsp = float(input("\nIngrese el valor de HSP [h]: "))
+
+elif ingreso_HSP == "2":
+
+    print("\nEstados disponibles:")
+    for estado in HSP_por_estado:
+        print("-", estado)
+
+    estado = input("\nIngrese el estado donde se ubica la instalación: ")
+
+    if estado not in HSP_por_estado:
+        print("Estado no disponible en la base de datos")
+        exit()
+
+    hsp = HSP_por_estado[estado]
+
+else:
+    print("Selección inválida. Escoja las opciones disponibles.")
+    exit()
+
+print("HSP seleccionada:", hsp)
+
+#=====================================================ELECTRICO======================================================0
+print("\n  Dimensionamiento del SFV (Consideraciones eléctricas)")
+
+#Se define el tipo de sistema fotovoltaico a dimensionar
+
+tipo_sistema = input("¿Qué tipo de sistema dimensionará? Escriba el número de opción correspondiente:" \
+"\n 1) Aislado" \
+"\n 2) Interconectado " \
+"\n 3) Bombeo de agua" \
+"\n Selección: ")
+
+# ======== CALCULO DE ENERGIA DIARIA ============
+
+perfil_consumo_diario = input("Metodo de estimación del consumo diario: Escriba el número de opción que desea para calcular su consumo " \
+"\n 1) Detallar cargas" \
+"\n 2) Recibo de luz" \
+"\n Seleccion: ")
+
+#Método de cargas
+
+if perfil_consumo_diario == "1":
+
+    cargas = []
+
+    n = int(input("\nNumero de cargas a ingresar (filas de la tabla): "))
+
+    for i in range(n):
+        print(f"\nEntrada {i+1}")
+
+        elemento = input("Descripción del elemento: ")
+        tipo_de_carga = input("Tipo de carga (AC/DC): ")
+        cantidad = int(input("Cantidad: "))
+        potencia = float(input("Potencia unitaria [W]: "))
+        horas = float(input("Horas uso/dia: "))
+
+        cargas.append((elemento, tipo_de_carga, cantidad, potencia, horas))
+
+    tabla, energia_kwh, potencia_kw = crear_tabla_cargas(cargas)
+
+    print("\nTabla de cargas:")
+    print(tabla)
+
+    energia_para_paneles = energia_kwh
+    potencia_demanda = potencia_kw
+
+#Método de recibo
+
+elif perfil_consumo_diario == "2":
+
+    registros = []
+
+    n = int(input("\nNumero de entradas (fila de tabla): "))
+
+    for i in range(n):
+        consumo = float(input(f"Consumo periodo {i+1} [kWh]: "))
+        precio = float(input(f"Precio periodo {i+1} [$MX]: "))
+
+        registros.append((consumo, precio))
+
+    dias = int(input("Dias del periodo (ej 60): "))
+
+    tabla, energia_diaria, potencia_diaria, precio_prom = crear_tabla_recibo(registros, dias)
+
+    print("\nTabla del recibo:")
+    print(tabla)
+    print("\nPrecio promedio [$]:", round(precio_prom,2))
+
+    costo_perfil_consumo = precio_prom
+    energia_para_paneles = energia_diaria
+    potencia_demanda = potencia_diaria
+
+else:
+    print("Seleccion invalida")
+    exit()
+
+#============= CALCULO DE PANELES ======================================================
+
+#Se piden los parámetros del panel del datasheet
+Vnom_panel = float(input("\nVoltaje nominal del panel [V]: "))
+potencia_panel = float(input("Potencia del panel [W]: "))
+Imp_panel = float(input("Corriente de máxima potencia [A]: "))
+Vmp_panel=float(input("Voltaje de máxima potencia [V]: "))
+Pmp_panel = Imp_panel*Vmp_panel
+Isc_panel=float(input("Corriente de cortocircuito [A]: "))
+Voc_panel=float(input("Voltaje de circuito abierto [V]: "))
+
+paneles = calcular_paneles(energia_para_paneles,potencia_panel,hsp)
+
+#Se cálcula el número de paneles
+paneles_serie, Vsistema = calcular_paneles_serie(energia_para_paneles,Vnom_panel)
+paneles_paralelo = calcular_paneles_paralelo(paneles, paneles_serie)
+
+#Se calcula la corriente del sistema
+I_sistema=Imp_panel*paneles_paralelo
+
+
+#=============================BATERIAS (AISLADO)===========================
+if tipo_sistema == "1":
+
+    tipo_bateria = input("\nIndique el tipo de batería (Plomo/Litio): ")
+
+    dias_autonomia = float(input("\nIndique los días de autonomía. Se recomienda un rango de 1-3 días, puesto que un valor alto de días incrementa significativamente los costos del sistema.: "))
+
+    #Cálculo para la capacidad de la batería
+    Cn_Ah,DoD=calcular_capacidad_baterias(energia_para_paneles,tipo_bateria,dias_autonomia,Vsistema)
+
+    C_comercial,Vn_bateria=seleccionar_bateria(tipo_bateria)
+    
+    if Vsistema % Vn_bateria != 0:
+        raise ValueError("El voltaje de batería no es compatible con el sistema. Por favor, escoge otro modelo.")
+
+    #Calculo de número de baterías
+    N_bat_serie = calcular_baterias_serie(Vsistema, Vn_bateria)
+    N_bat_paralelo = calcular_baterias_paralelo(Cn_Ah, C_comercial)
+
+    total_baterias = N_bat_serie * N_bat_paralelo
+
+else:
+    print("\nSistema interconectado o bombeo: no se requiere banco de baterías.")
+
+#===============INVERSOR, REGULADOR, CABLEADO====================
+
+
+
+
+#================Protecciones===================================
+
+
+
+
+#==================RESULTADOS ELECTRICOS==============================
+
+print("\n Resultados obtenidos:")
+
+print("\nEl perfil de consumo diario tiene un valor de:", round(energia_para_paneles,3), "kWh")
+print("La potencia diaria que demanda el sistema es: ", round(potencia_demanda,3),"kW")
+print("El voltaje del sistema es:", Vsistema, "V")
+
+
+print("\n====DIMENSIONAMIENTO========")
+print("---------Paneles------------")
+print("\nPaneles en serie: ",paneles_serie)
+print("Paneles en paralelo: ",paneles_paralelo)
+
+if tipo_sistema=="1":
+    print("\n--- Banco de baterías ---")
+    print("\nLa cantidad de baterias a utilizar es: ",total_baterias," con",N_bat_serie," en configuración serie y",N_bat_paralelo," en configuración paralelo")
+    print("Capacidad comercial seleccionada:", C_comercial, "Ah")
+    print("Voltaje nominal de batería:", Vn_bateria, "V")
+    
+    print("\n-----Inversor------")
+    I_inversor=calculo_inversor(I_sistema, potencia_panel,paneles_serie,paneles_paralelo,Vn_bateria)
+    print("\nEl inversor deberá soportar una intensidad mayor a:", I_inversor,"A")
+
+    print("\n------Regulador-------")
+    I_regulador=calculo_regulador(Isc_panel,paneles_paralelo)
+    print("\nEl regulador deberá soportar una intensidad mayor a:",I_regulador,"A")
+
+
+if tipo_sistema=="2":
+
+    print("\n-----Inversor------")
+    I_inversor=calculo_inversor(I_sistema, potencia_panel,paneles_serie,paneles_paralelo,Vn_bateria)
+    print("\nEl inversor deberá soportar una intensidad mayor a:", I_inversor,"A")
+
+    print("\n-----Protecciones-----")
+    I_fusible=calculo_cc_fusible_int(Isc_panel)
+    print("\nLa corriente nominal del fusible es de:",I_fusible,"A")
+
+
+I_cable=calculo_cableado(Isc_panel)
+print("\nEl cableado del sistema deberá soportar una intensidad de:",I_cable,"A")
+
+#==============================================AMBIENTAL=============================================================
+
+print("\n  Dimensionamiento del SFV (Consideraciones ambientales)")
+
+energia_anual_inicial=energia_para_paneles*365
+ahorro_co2_anual=emision_anual(energia_anual_inicial)
+vector_ahorros = emision_tiempo_de_vida(energia_anual_inicial)
+ahorro_total = ahorro_co2_acumulado(vector_ahorros)
+grafica_energia_degradacion(energia_anual_inicial).show()
+grafica_ahorro_co2(vector_ahorros).show()
+
+print("\nEnergía anual generada (inicial):",round(energia_anual_inicial,2), "kWh")
+print("Ahorro de CO2 el primer año:",round(ahorro_co2_anual,2), "kgCO2")
+print("Ahorro de C02 total en la vida útil del sistema (25 años):",round(ahorro_total/1000,2), "tonCO2")

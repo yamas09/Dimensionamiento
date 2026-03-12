@@ -1,0 +1,16 @@
+packages:
+  "framer-motion": "Smooth step transitions and animations for the wizard"
+  "recharts": "Visualizing environmental degradation and CO2 savings over time"
+  "react-hook-form": "Managing complex multi-step form state and dynamic arrays"
+  "@hookform/resolvers": "Zod schema validation integration for the form"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes safely"
+
+images:
+  - path: "artifacts/sfv-dimensionador/public/images/solar-hero.png"
+    description: "Abstract minimal geometric representation of solar panels and clean energy in vibrant emerald green and teal on a light background, 3D soft glassmorphism style"
+    aspect_ratio: "16:9"
+
+notes:
+  - Expects the API at /api/sfv/calcular as defined in the OpenAPI spec.
+  - Imports generated hooks from @workspace/api-client-react

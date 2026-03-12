@@ -1,0 +1,306 @@
+#==== PERFIL DE CONSUMO DIARIO ===============================================
+
+import math
+import pandas as pd
+
+#Agregamos la tabla de HSP para el cálculo de paneles
+
+HSP_por_estado= {
+
+    "Aguascalientes":6.67,
+    "Baja California":6.93,
+    "Baja California Sur":6.53,
+    "Campeche":5.96,
+    "Chiapas":5.81,
+    "Chihuahua":6.66,
+    "Ciudad de México":6.02,
+    "Coahuila":6.26,
+    "Colima":6.12,
+    "Durango":6.77,
+    "Estado de México":6.03,
+    "Guanajuato":6.61,
+    "Guerrero":6.24,
+    "Hidalgo":6.38,
+    "Jalisco":5.89,
+    "Michoacán":6.19,
+    "Morelos":6.22,
+    "Nayarit": 6.27,
+    "Nuevo León":5.79,
+    "Oaxaca":6.24,
+    "Puebla":6.37,
+    "Querétaro":6.56,
+    "Quintana Roo": 5.81,
+    "San Luis Potosí":6.45,
+    "Sinaloa": 6.26,
+    "Sonora": 6.70,
+    "Tabasco": 5.52,
+    "Tamaulipas": 5.87,
+    "Tlaxcala": 6.19,
+    "Veracruz":4.93,
+    "Yucatán" :5.62,
+    "Zacatecas":6.70,
+}
+
+#Función para estimación de energía mediante método de tabla (ingreso manual de cargas)
+
+def crear_tabla_cargas (datos_cargas):
+    """
+    Crearemos la tabla. Para ingresar los datos, se consideran los encabezados
+    1. Elemento: Se describe la carga (Lámpara, televisión, lavadora, etc)
+    2. Cantidad: Número de elementos a considerar
+    3. Potencia unitaria: Potencia de la carga individualmente [en Watts]
+    4. Tiempo de uso: Horas al día que la carga se encuentra en uso (se alimenta de la energía eléctrica)
+    Agregar como:
+        (Elemento, tipo de carga, cantidad, potencia unitaria, horas al día), por ejemplo:
+
+        (Lámpara, 5, 30, 4),
+        (Televisión, 2, 200, 5), 
+        ...
+        (Refrigerador, 1, 350, 24)
+    """
+    
+    df = pd.DataFrame(
+        datos_cargas,
+        columns=["Elemento","Tipo de carga (AC/DC)", "Cantidad","Potencia unitaria [W]", "Tiempo de uso [h]"]
+    )
+
+    #Se aplica el factor de corrección para cargar AC
+    df["Potencia c/u [W]"] = df.apply(lambda row: row["Potencia unitaria [W]"] * 1.1 if row["Tipo de carga (AC/DC)"].upper() == "AC" else row["Potencia unitaria [W]"], axis=1)
+
+    #La potencia total se divide entre 1000 para expresarla en kW y por ende, la energía en kWh
+    df["Potencia total [kW]"] = (df["Cantidad"] *df["Potencia c/u [W]"])/1000
+    df["Energia total [kWh]"] = df["Potencia total [kW]"] * df["Tiempo de uso [h]"]
+
+    potencia_diaria=df["Potencia total [kW]"].sum()
+    energia_diaria= df["Energia total [kWh]"].sum()
+
+
+    return df, energia_diaria, potencia_diaria
+
+#Función para estimación de energía mediante método de recibo (ingreso manual de consumo)
+
+def crear_tabla_recibo(consumos_precios, periodo=60):
+    """
+    El dato consumo_kWh se rescata del apartado CONSUMO HISTÓRICO de recibo de luz.
+    Agregar como:
+        (Consumo [kWh], precio [pesos mexicanos]), por ejemplo
+
+        (268, 1268),
+        (187, 1187),
+        ...
+        (168, 1168)
+    """
+    df = pd.DataFrame(
+        consumos_precios,
+        columns=["Consumo [kWh]", "Precio [$MX]"]
+    )
+
+    promedio_consumo = df["Consumo [kWh]"].mean()
+    promedio_precios = df["Precio [$MX]"].mean()
+
+
+    energia_diaria = promedio_consumo / periodo
+    potencia_diaria = energia_diaria / 24
+
+    return df, energia_diaria, potencia_diaria, promedio_precios
+
+
+#============ Función para calcular los paneles ================================================
+
+def calcular_paneles(energia_diaria, potencia_panel, hsp):
+
+    potencia_kw = potencia_panel / 1000
+    num_paneles = (1.2 * energia_diaria) / (potencia_kw * hsp)
+
+    return math.ceil(num_paneles)
+
+
+def calcular_paneles_serie(energia_diaria,Vnom_panel):
+    if energia_diaria<2:
+        Vnom_sistema= 12
+    elif energia_diaria<4.5:
+        Vnom_sistema= 24
+    else:
+        Vnom_sistema= 48
+    num_paneles_serie = math.ceil(Vnom_sistema / Vnom_panel)
+
+    return num_paneles_serie, Vnom_sistema
+
+
+def calcular_paneles_paralelo(num_paneles,num_paneles_serie):
+    if num_paneles_serie == 0:
+        raise ValueError("El número de paneles en serie no puede ser igual a cero")
+    
+    num_paneles_paralelo = math.ceil(num_paneles / num_paneles_serie)
+
+    return num_paneles_paralelo
+
+
+#=================CALCULO DE BATERIAS===================
+
+CATALOGO_BATERIAS = {
+    "Plomo": [
+        {"modelo":"Plomo 100Ah 12V","Ah":100,"V":12},
+        {"modelo":"Plomo 150Ah 12V","Ah":150,"V":12},
+        {"modelo":"Plomo 200Ah 12V","Ah":200,"V":12},
+        {"modelo":"Plomo 250Ah 12V","Ah":250, "V":12}
+    ],
+    "Litio": [
+        {"modelo":"Litio 50Ah 48V","Ah":50,"V":48},
+        {"modelo":"Litio 100Ah 12V","Ah":100,"V":12},
+        {"modelo":"Litio 100Ah 24V","Ah":100,"V":24},
+        {"modelo":"Litio 100Ah 48V","Ah":100,"V":48},
+        {"modelo":"Litio 150Ah 12V","Ah":150,"V":12},
+        {"modelo":"Litio 150Ah 24V","Ah":150,"V":24},
+        {"modelo":"Litio 200Ah 12V","Ah":200,"V":12}
+    ]
+}
+
+#Se determina la DoD
+
+Descarga_tipo={ #Aquí es el tipo de bateria que se usará, con base en eso es la profunidad de descarga
+    "Plomo":0.7,
+    "Litio":0.9,
+}
+#Se tiene que tener dias de autonomía, se representara como Daut
+def calcular_capacidad_baterias(energia_diaria, tipo, Daut, Vnom_sistema):
+    if tipo not in Descarga_tipo:
+        raise ValueError("Tipo de batería no disponible en base de datos")
+    
+    DoD = Descarga_tipo[tipo]
+
+    Cn_Ah = ((1.2*energia_diaria*1000*Daut) / (Vnom_sistema * DoD))
+
+    return math.ceil(Cn_Ah), DoD
+
+#Con base en la capacidad total del banco, se propone que el usuario ingrese su valor de batería
+#a utilizar. Puede ser ingresada manualmente o escogida de una lista de opciones.
+
+def seleccionar_bateria(tipo):
+
+    if tipo not in Descarga_tipo:
+        raise ValueError("Tipo de batería no disponible")
+
+    opcion = input(
+        "\n¿Cómo desea seleccionar las características de la batería? Escriba el número\n"
+        " 1) Escoger del catálogo\n"
+        " 2) Ingresar valores manualmente\n"
+        "Selección: ")
+
+# Si se selecciona catálogo
+
+    if opcion=="1":
+
+        catalogo=CATALOGO_BATERIAS[tipo]
+
+        print("\nOpciones disponibles:")
+        for i, bat in enumerate(catalogo):
+            print(f"{i+1}) {bat['modelo']}")
+
+        seleccion=int(input("Seleccione el número de opción: "))
+
+        if seleccion<1 or seleccion>len(catalogo):
+            raise ValueError("Selección inválida")
+
+        bateria=catalogo[seleccion-1]
+        C_comercial=bateria["Ah"]
+        Vn_bateria=bateria["V"]
+
+#Si se selecciona ingresar manualmente
+
+    elif opcion=="2":
+        C_comercial = float(input("Ingrese capacidad de la batería [Ah]: "))
+        Vn_bateria = float(input("Ingrese voltaje nominal de la batería [V]: "))
+    else:
+        raise ValueError("Error. Por favor, escoja una de las dos opciones mostradas")
+
+    return C_comercial, Vn_bateria
+
+#Cálculo para baterias en serie
+def calcular_baterias_serie(Vnom_sistema, Vn_bateria):
+    return math.ceil(Vnom_sistema / Vn_bateria)
+
+#Cálculo para baterías en paralelo
+def calcular_baterias_paralelo(Cn_Ah, C_comercial):
+    return math.ceil(Cn_Ah / C_comercial)
+
+#=================CALCULO INVERSOR=====================
+
+def calculo_inversor(I_sistema, potencia_panel,num_paneles_serie,num_paneles_paralelo,Vn_bateria):
+    Ic = (potencia_panel*num_paneles_paralelo*num_paneles_serie)/Vn_bateria
+    I_inversor = max(Ic, I_sistema)
+    return I_inversor
+
+#====================CALCULO REGULADOR/CONTROLADOR===============
+
+def calculo_regulador(Isc_panel,num_paneles_paralelo):
+    I_regulador=Isc_panel*1.25*num_paneles_paralelo
+
+    return I_regulador
+
+#=======================Cableado===========================
+
+def calculo_cableado(Isc_panel):
+    I_cable = Isc_panel * 1.25
+
+    return I_cable
+
+#====================Protecciones=============================
+
+def calculo_cc_breaker_ais(Isc_panel, num_paneles_paralelo):
+    In_breaker = Isc_panel*num_paneles_paralelo*1.25
+
+    return In_breaker
+
+def calculo_cc_fusible_ais(I_regulador):
+    In_fusible_ais=I_regulador*1.25
+
+    return In_fusible_ais
+
+##def calculo_cc_interruptor_ais():
+##Agregar
+
+def calculo_cc_fusible_int(Isc_panel):
+    In_fusible_int = Isc_panel * 1.5
+    return In_fusible_int
+
+
+def calculo_cc_interruptor_seccionador(Voc_panel, Isc_panel):
+    V_interruptor_seccionador = Voc_panel * 1.15
+    I_interruptor_seccionador = Isc_panel * 1.25
+
+    return V_interruptor_seccionador, I_interruptor_seccionador
+
+def calculo_cc_sobretensiones(Voc_panel):
+    V_sobretensiones = Voc_panel * 1.15
+
+    return V_sobretensiones
+
+def calculo_ca_interruptor_termomagnetico(Ic):
+    In_interruptor_termomagnetico = Ic * 1.25
+
+    return In_interruptor_termomagnetico
+
+  #Para el diferencial se pondrá directamente que debe ser de tipo B y la especificación de A
+  #Al igual que la Puesta a tierra
+
+
+
+#========================= SISTEMA DE BOMBEO ============
+
+def calculo_potencia_hidraulica (H_real,V_agua):
+    H_mt = H_real * 1.15
+    Q=V_agua/6
+    Potencia_hidraulica = H_mt*Q
+    return Potencia_hidraulica
+
+def paneles_bombeo (Potencia_hidraulica,num_paneles_serie,potencia_panel):
+    paneles_paralelo=Potencia_hidraulica/(num_paneles_serie*potencia_panel)
+    return paneles_paralelo
+
+#P__:inverinversor, V_bat
+#    In:_fuinterruptor_ais= P_invertsor/()V_bat*0.9)(*1.25
+    
+    
+    
+ #   retirurni In_interruptor _ais_int:inty_int_int
