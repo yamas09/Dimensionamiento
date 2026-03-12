@@ -64,12 +64,12 @@ const sfvSchema = z.object({
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// id 3 = Baterías (solo aislado), id 4 = Panel
+// id 3 = Panel, id 4 = Baterías (solo aislado)
 const STEPS = [
   { id: 1, title: "Ubicación", icon: MapPin },
   { id: 2, title: "Perfil",    icon: Zap },
-  { id: 3, title: "Baterías",  icon: Battery },
-  { id: 4, title: "Panel",     icon: Sun },
+  { id: 3, title: "Panel",     icon: Sun },
+  { id: 4, title: "Baterías",  icon: Battery },
 ];
 
 interface CalculatorPageProps {
@@ -113,17 +113,17 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const tipoBateria = watch("tipoBateria");
   const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
 
-  // Paso 3 (Baterías) solo aparece para sistemas aislados
+  // Paso 4 (Baterías) solo aparece para sistemas aislados
   const visibleSteps = STEPS.filter(s => {
-    if (s.id === 3 && tipoSistema !== "aislado") return false;
+    if (s.id === 4 && tipoSistema !== "aislado") return false;
     return true;
   });
 
-  // Si el usuario cambia el tipo de sistema mientras está en el paso de Baterías (id 3),
-  // regresarlo al paso 2 para que no quede en un paso invisible.
+  // Si el usuario cambia el tipo de sistema mientras está en el paso de Baterías (id 4),
+  // regresarlo al paso 3 (Panel) para que no quede en un paso invisible.
   useEffect(() => {
-    if (tipoSistema !== "aislado" && activeStep === 3) {
-      setActiveStep(2);
+    if (tipoSistema !== "aislado" && activeStep === 4) {
+      setActiveStep(3);
     }
   }, [tipoSistema]);
 
@@ -133,10 +133,10 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     let fieldsToValidate: any[] = [];
     if (activeStep === 1) fieldsToValidate = ["latitud", "longitud", "hsp"];
     if (activeStep === 2) fieldsToValidate = ["tipoSistema", "metodoPerfil", "cargas", "registrosRecibo", "diasPeriodoRecibo"];
-    // Paso 3 = Baterías (solo para aislado): valida los campos de batería antes de continuar al paso de Panel
-    if (activeStep === 3) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
-    // Paso 4 = Panel: no hay nextStep (es el último), pero por si acaso
-    if (activeStep === 4) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
+    // Paso 3 = Panel: valida ficha técnica antes de continuar
+    if (activeStep === 3) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
+    // Paso 4 = Baterías (solo para aislado): valida los campos de batería antes de calcular
+    if (activeStep === 4) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
     
     const isValid = await trigger(fieldsToValidate as any);
     
@@ -319,21 +319,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                     </div>
                   )}
 
-                  {/* STEP 3 — Baterías (solo para sistema aislado) */}
+                  {/* STEP 3 — Ficha Técnica del Panel */}
                   {activeStep === 3 && (
-                    <BateriasStep
-                      control={control}
-                      register={methods.register}
-                      errors={errors}
-                      watch={watch}
-                      setValue={setValue}
-                      tipoBateria={tipoBateria}
-                      bateriaSeleccionMetodo={bateriaSeleccionMetodo}
-                    />
-                  )}
-
-                  {/* STEP 4 — Panel */}
-                  {activeStep === 4 && (
                     <div className="space-y-6">
                       <div className="border-b border-border pb-4 mb-6">
                         <h2 className="text-2xl font-bold flex items-center gap-2"><Sun className="w-6 h-6 text-primary" /> Ficha Técnica del Panel</h2>
@@ -360,6 +347,19 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                         </FormField>
                       </div>
                     </div>
+                  )}
+
+                  {/* STEP 4 — Baterías (solo para sistema aislado) */}
+                  {activeStep === 4 && (
+                    <BateriasStep
+                      control={control}
+                      register={methods.register}
+                      errors={errors}
+                      watch={watch}
+                      setValue={setValue}
+                      tipoBateria={tipoBateria}
+                      bateriaSeleccionMetodo={bateriaSeleccionMetodo}
+                    />
                   )}
 
                 </motion.div>
