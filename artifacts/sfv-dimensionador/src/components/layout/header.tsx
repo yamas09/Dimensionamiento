@@ -1,22 +1,36 @@
 import { Link } from "wouter";
-import { Sun } from "lucide-react";
+import { Sun, FileText } from "lucide-react";
 
-export function Header() {
+interface HeaderProps {
+  hasResult: boolean;
+  onReport: () => void;
+}
+
+export function Header({ hasResult, onReport }: HeaderProps) {
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-border z-50">
+    <header className="sticky top-0 z-50 h-14 bg-white/90 backdrop-blur-md border-b border-border shadow-sm shadow-black/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
           <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg text-white group-hover:shadow-lg group-hover:shadow-primary/20 transition-all">
-            <Sun className="w-5 h-5" />
+            <Sun className="w-4 h-4" />
           </div>
-          <span className="font-display font-bold text-xl text-foreground tracking-tight">
+          <span className="font-bold text-lg text-foreground tracking-tight whitespace-nowrap">
             Dimensionador<span className="text-primary">SFV</span>
           </span>
         </Link>
-        <nav className="flex items-center gap-6">
-          <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Calculadora</Link>
-          <a href="#" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Documentación</a>
-        </nav>
+
+        <button
+          onClick={onReport}
+          disabled={!hasResult}
+          title={hasResult ? "Generar reporte PDF" : "Realiza un cálculo primero"}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all
+            disabled:opacity-40 disabled:cursor-not-allowed
+            enabled:border-primary/30 enabled:text-primary enabled:hover:bg-primary/5 enabled:hover:border-primary/60 enabled:hover:shadow-sm
+            border-slate-200 text-slate-400"
+        >
+          <FileText className="w-4 h-4" />
+          Reporte
+        </button>
       </div>
     </header>
   );
