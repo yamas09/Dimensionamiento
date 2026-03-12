@@ -293,6 +293,13 @@ router.post("/calcular", (req, res) => {
     if (data.bateriaAh && data.bateriaV) {
       capacidadComercial = data.bateriaAh;
       vBat = data.bateriaV;
+      // Validar compatibilidad: Vsistema % Vn_bateria debe ser 0 (igual que Python)
+      if (voltajeSistema % vBat !== 0) {
+        res.status(400).json({
+          error: `El voltaje de la batería (${vBat}V) no es compatible con el voltaje del sistema (${voltajeSistema}V). El voltaje del sistema debe ser múltiplo del voltaje de la batería. Escoge otro modelo.`,
+        });
+        return;
+      }
     } else {
       const seleccion = seleccionarBateria(data.tipoBateria, capacidadAh, voltajeSistema);
       capacidadComercial = seleccion.capacidadComercial;

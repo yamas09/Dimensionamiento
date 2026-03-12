@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
-import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
 import { cn } from "@/lib/utils";
@@ -505,6 +505,252 @@ function RecibosTable({ control, register, errors }: any) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ================= Baterías Step Component =================
+function BateriasStep({ control, register, errors, watch, setValue, tipoBateria, bateriaSeleccionMetodo }: any) {
+  // --- Estimar energía diaria desde datos ya ingresados en steps anteriores ---
+  const metodoPerfil = watch("metodoPerfil");
+  const cargas = watch("cargas") || [];
+  const registrosRecibo = watch("registrosRecibo") || [];
+  const diasPeriodoRecibo = watch("diasPeriodoRecibo") || 30;
+  const diasAutonomia = watch("diasAutonomia");
+  const bateriaAh = watch("bateriaAh");
+  const bateriaV = watch("bateriaV");
+
+  let energiaEstimada = 0;
+  if (metodoPerfil === "cargas" && cargas.length > 0) {
+    energiaEstimada = cargas.reduce((sum: number, c: any) => {
+      const pot = c.tipoCarga === "AC" ? (c.potencia || 0) * 1.1 : (c.potencia || 0);
+      return sum + ((c.cantidad || 0) * pot * (c.horas || 0)) / 1000;
+    }, 0);
+  } else if (metodoPerfil === "recibo" && registrosRecibo.length > 0) {
+    const promedio = registrosRecibo.reduce((s: number, r: any) => s + (r.consumo || 0), 0) / registrosRecibo.length;
+    energiaEstimada = promedio / diasPeriodoRecibo;
+  }
+
+  // --- Voltaje del sistema (misma lógica que el backend y Python) ---
+  const voltajeSistema: number = energiaEstimada < 2 ? 12 : energiaEstimada < 4.5 ? 24 : 48;
+
+  // --- Capacidad nominal requerida (Cn_Ah) ---
+  const dod = tipoBateria ? (DOD_POR_TIPO[tipoBateria] ?? 0.7) : 0.7;
+  const cnAh = (energiaEstimada > 0 && diasAutonomia && voltajeSistema)
+    ? Math.ceil((1.2 * energiaEstimada * 1000 * diasAutonomia) / (voltajeSistema * dod))
+    : null;
+
+  // Compatibilidad de la batería manual
+  const manualIncompatible = bateriaV && voltajeSistema % bateriaV !== 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="border-b border-border pb-4 mb-6">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Battery className="w-6 h-6 text-primary" /> Configuración de Baterías
+        </h2>
+        <p className="text-muted-foreground mt-1">Banco de baterías para el sistema aislado.</p>
+      </div>
+
+      {/* Info card: Voltaje del sistema + Cn_Ah estimado */}
+      {energiaEstimada > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Voltaje del sistema</p>
+              <p className="text-lg font-bold text-blue-800">{voltajeSistema} V</p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                Energía diaria estimada: {energiaEstimada.toFixed(2)} kWh/día
+              </p>
+            </div>
+          </div>
+          {cnAh !== null && (
+            <div className="flex-1 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+              <Info className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Capacidad requerida (Cn)</p>
+                <p className="text-lg font-bold text-emerald-800">{cnAh} Ah</p>
+                <p className="text-xs text-emerald-600 mt-0.5">DoD {(dod * 100).toFixed(0)}% · {diasAutonomia} día(s) autonomía</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tipo de batería + días autonomía */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <FormField label="Tipo de Batería" error={errors.tipoBateria?.message}>
+          <Controller
+            control={control}
+            name="tipoBateria"
+            render={({ field }) => (
+              <div className="flex bg-muted p-1 rounded-xl">
+                {(["Plomo", "Litio"] as const).map(t => (
+                  <button
+                    key={t} type="button"
+                    onClick={() => {
+                      field.onChange(t);
+                      setValue("bateriaAh", undefined);
+                      setValue("bateriaV", undefined);
+                    }}
+                    className={cn(
+                      "flex-1 py-2 text-sm font-medium rounded-lg transition-all",
+                      field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {t} <span className="text-xs opacity-70">(DoD {(DOD_POR_TIPO[t] * 100).toFixed(0)}%)</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          />
+        </FormField>
+
+        <FormField label="Días de Autonomía (recomendado 1–3)" error={errors.diasAutonomia?.message}>
+          <input type="number" step="any" min="1" max="10" {...register("diasAutonomia")} className="input-field" />
+        </FormField>
+      </div>
+
+      {/* Método de selección */}
+      <div>
+        <p className="text-sm font-semibold text-foreground mb-3">¿Cómo desea especificar la batería?</p>
+        <Controller
+          control={control}
+          name="bateriaSeleccionMetodo"
+          render={({ field }) => (
+            <div className="flex gap-3">
+              {[
+                { value: "catalogo", label: "Escoger del catálogo" },
+                { value: "manual",   label: "Ingresar manualmente" },
+              ].map(opt => (
+                <button
+                  key={opt.value} type="button"
+                  onClick={() => {
+                    field.onChange(opt.value);
+                    setValue("bateriaAh", undefined);
+                    setValue("bateriaV", undefined);
+                  }}
+                  className={cn(
+                    "flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all text-center",
+                    field.value === opt.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Catálogo */}
+      {bateriaSeleccionMetodo === "catalogo" && tipoBateria && (
+        <div>
+          <p className="text-sm font-semibold text-foreground mb-1">
+            Modelos disponibles — {tipoBateria}
+          </p>
+          <p className="text-xs text-muted-foreground mb-3">
+            Solo las baterías compatibles con el voltaje del sistema ({voltajeSistema}V) pueden seleccionarse.
+            Las incompatibles aparecen desactivadas.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(CATALOGO_BATERIAS[tipoBateria] ?? []).map((bat) => {
+              const compatible = voltajeSistema % bat.V === 0;
+              const isSelected = bateriaAh === bat.Ah && bateriaV === bat.V;
+              const meetsCn = cnAh !== null ? bat.Ah >= cnAh : true;
+              return (
+                <button
+                  key={bat.modelo} type="button"
+                  disabled={!compatible}
+                  onClick={() => {
+                    if (!compatible) return;
+                    setValue("bateriaAh", bat.Ah, { shouldValidate: true });
+                    setValue("bateriaV",  bat.V,  { shouldValidate: true });
+                  }}
+                  className={cn(
+                    "flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all relative",
+                    !compatible && "opacity-40 cursor-not-allowed bg-muted border-border",
+                    compatible && isSelected && "border-primary bg-primary/5 shadow-sm shadow-primary/10",
+                    compatible && !isSelected && "border-border hover:border-primary/40 hover:bg-muted/50"
+                  )}
+                >
+                  <div>
+                    <p className={cn(
+                      "font-semibold text-sm",
+                      isSelected ? "text-primary" : compatible ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      {bat.modelo}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{bat.Ah} Ah · {bat.V} V</p>
+                    {compatible && cnAh !== null && (
+                      <p className={cn("text-xs mt-1 font-medium", meetsCn ? "text-emerald-600" : "text-amber-600")}>
+                        {meetsCn ? `✓ Cumple Cn (${cnAh} Ah req.)` : `⚠ Insuf. — Cn req. ${cnAh} Ah`}
+                      </p>
+                    )}
+                    {!compatible && (
+                      <p className="text-xs mt-1 text-red-500 font-medium">
+                        Incompatible con {voltajeSistema}V
+                      </p>
+                    )}
+                  </div>
+                  {isSelected && <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+          {!bateriaAh && (
+            <p className="text-xs text-amber-600 font-medium mt-3">
+              Selecciona un modelo compatible del catálogo para continuar.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Manual */}
+      {bateriaSeleccionMetodo === "manual" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/40 rounded-xl border border-border">
+            <FormField label="Capacidad de la batería [Ah]" error={errors.bateriaAh?.message}>
+              <input
+                type="number" step="any" min="1"
+                {...register("bateriaAh")}
+                className="input-field"
+                placeholder={cnAh ? `Mín. recomendado: ${cnAh} Ah` : "Ej. 200"}
+              />
+            </FormField>
+            <FormField label="Voltaje nominal de la batería [V]" error={errors.bateriaV?.message}>
+              <input
+                type="number" step="any" min="1"
+                {...register("bateriaV")}
+                className="input-field"
+                placeholder={`Debe dividir a ${voltajeSistema}V`}
+              />
+            </FormField>
+          </div>
+          {/* Advertencia de incompatibilidad en tiempo real */}
+          {manualIncompatible && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                El voltaje de batería <strong>{bateriaV}V</strong> no es divisor exacto del voltaje del sistema <strong>{voltajeSistema}V</strong>.
+                El cálculo fallará. Usa {voltajeSistema === 48 ? "12V, 24V o 48V" : voltajeSistema === 24 ? "12V o 24V" : "12V"}.
+              </span>
+            </div>
+          )}
+          {cnAh !== null && bateriaAh && bateriaAh < cnAh && !manualIncompatible && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl px-4 py-3 text-sm">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                La capacidad ingresada (<strong>{bateriaAh} Ah</strong>) es menor a la requerida por el sistema (<strong>{cnAh} Ah</strong>).
+                Se necesitarán más baterías en paralelo.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
