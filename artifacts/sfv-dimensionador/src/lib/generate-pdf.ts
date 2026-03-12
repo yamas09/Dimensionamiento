@@ -75,7 +75,7 @@ export function generatePDF(data: SFVResultado) {
     }
     .cover {
       padding: 60px 60px 40px;
-      border-bottom: 4px solid #10b981;
+      border-bottom: 4px solid #f97316;
     }
     .cover-logo {
       display: flex;
@@ -85,7 +85,7 @@ export function generatePDF(data: SFVResultado) {
     }
     .cover-logo .dot {
       width: 28px; height: 28px;
-      background: linear-gradient(135deg, #10b981, #14b8a6);
+      background: linear-gradient(135deg, #f97316, #f59e0b);
       border-radius: 8px;
     }
     .cover-logo span {
@@ -94,7 +94,7 @@ export function generatePDF(data: SFVResultado) {
       color: #1e293b;
       letter-spacing: -0.5px;
     }
-    .cover-logo span em { font-style: normal; color: #10b981; }
+    .cover-logo span em { font-style: normal; color: #f97316; }
     h1 {
       font-size: 28px;
       font-weight: 900;
@@ -145,12 +145,12 @@ export function generatePDF(data: SFVResultado) {
     h2 {
       font-size: 14px;
       font-weight: 800;
-      color: #10b981;
+      color: #f97316;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       margin-bottom: 10px;
       padding-bottom: 6px;
-      border-bottom: 2px solid #d1fae5;
+      border-bottom: 2px solid #fed7aa;
     }
     table { width: 100%; border-collapse: collapse; }
     tr:nth-child(even) td { background: #f8fafc; }
@@ -159,13 +159,13 @@ export function generatePDF(data: SFVResultado) {
     td.value { color: #0f172a; font-weight: 700; text-align: right; }
     th {
       padding: 7px 12px;
-      background: #f0fdf4;
-      color: #065f46;
+      background: #fff7ed;
+      color: #9a3412;
       font-weight: 700;
       font-size: 11px;
       text-transform: uppercase;
       text-align: left;
-      border: 1px solid #d1fae5;
+      border: 1px solid #fed7aa;
     }
     .footer {
       margin-top: 40px;

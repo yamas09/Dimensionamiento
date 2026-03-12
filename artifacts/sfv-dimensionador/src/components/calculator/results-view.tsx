@@ -51,15 +51,15 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           title="Ahorro CO₂ (1er Año)" 
           value={`${data.ambiental.ahorroCo2PrimerAnio.toFixed(2)}`} 
           unit="kg CO₂" 
-          icon={<Leaf className="w-5 h-5 text-emerald-500" />} 
-          colorClass="bg-emerald-50"
+          icon={<Leaf className="w-5 h-5 text-orange-500" />} 
+          colorClass="bg-orange-50"
         />
         <MetricCard 
           title="Ahorro CO₂ Total" 
           value={`${data.ambiental.ahorroCo2TotalTon.toFixed(2)}`} 
           unit="Ton (25 Años)" 
-          icon={<Leaf className="w-5 h-5 text-emerald-600" />} 
-          colorClass="bg-emerald-100"
+          icon={<Leaf className="w-5 h-5 text-amber-600" />} 
+          colorClass="bg-amber-50"
         />
       </div>
 
@@ -172,17 +172,17 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
         </div>
 
         {/* Environmental Summary */}
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 shadow-xl shadow-emerald-500/20 text-white flex flex-col justify-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-6 shadow-xl shadow-orange-500/20 text-white flex flex-col justify-center relative overflow-hidden">
           <Leaf className="absolute -bottom-4 -right-4 w-48 h-48 opacity-10" />
           <div className="relative z-10">
             <h3 className="text-2xl font-bold mb-2">Impacto Ambiental</h3>
-            <p className="text-emerald-50 mb-6 leading-relaxed">
+            <p className="text-orange-50 mb-6 leading-relaxed">
               Este sistema fotovoltaico generará <strong>{data.ambiental.energiaAnualKwh.toFixed(0)} kWh</strong> durante su primer año de operación.
             </p>
             <div className="bg-black/10 rounded-xl p-4 backdrop-blur-sm border border-white/10">
               <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 shrink-0 text-emerald-100 mt-0.5" />
-                <p className="text-sm text-emerald-50">
+                <Info className="w-5 h-5 shrink-0 text-orange-100 mt-0.5" />
+                <p className="text-sm text-orange-50">
                   Al cabo de 25 años, evitarás la emisión de <strong>{data.ambiental.ahorroCo2TotalTon.toFixed(1)} toneladas</strong> de CO₂, equivalente a plantar cientos de árboles.
                 </p>
               </div>
@@ -218,7 +218,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
 
         <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <Leaf className="w-5 h-5 text-emerald-500" />
+            <Leaf className="w-5 h-5 text-orange-500" />
             Ahorro Acumulado de CO₂ (25 Años)
           </h3>
           <div className="h-[300px] w-full">

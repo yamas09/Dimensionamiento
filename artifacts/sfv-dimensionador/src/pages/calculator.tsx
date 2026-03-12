@@ -180,7 +180,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     <div className="max-w-5xl mx-auto p-4 md:p-8 pt-6 min-h-screen flex flex-col">
       <div className="mb-8 text-center animate-in fade-in slide-in-from-top-4 duration-500">
         <h1 className="text-3xl md:text-5xl font-extrabold text-foreground tracking-tight">
-          Dimensionador <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-teal-500">SFV</span>
+          Dimensionador <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-500">SFV</span>
         </h1>
         <p className="mt-3 text-muted-foreground text-lg max-w-2xl mx-auto">
           Ingresa los parámetros de tu proyecto para obtener el dimensionamiento técnico y análisis ambiental.
@@ -204,7 +204,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                   <div className={cn(
                     "flex items-center justify-center w-8 h-8 rounded-full shrink-0",
                     isActive ? "bg-primary text-white shadow-md shadow-primary/30" : 
-                    isPast ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground"
+                    isPast ? "bg-orange-100 text-orange-600" : "bg-muted text-muted-foreground"
                   )}>
                     {isPast ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                   </div>
@@ -583,12 +583,12 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
             </div>
           </div>
           {cnAh !== null && (
-            <div className="flex-1 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-              <Info className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+            <div className="flex-1 flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+              <Info className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Capacidad requerida (Cn)</p>
-                <p className="text-lg font-bold text-emerald-800">{cnAh} Ah</p>
-                <p className="text-xs text-emerald-600 mt-0.5">DoD {(dod * 100).toFixed(0)}% · {diasAutonomia} día(s) autonomía</p>
+                <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Capacidad requerida (Cn)</p>
+                <p className="text-lg font-bold text-orange-800">{cnAh} Ah</p>
+                <p className="text-xs text-orange-600 mt-0.5">DoD {(dod * 100).toFixed(0)}% · {diasAutonomia} día(s) autonomía</p>
               </div>
             </div>
           )}
@@ -703,7 +703,7 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{bat.Ah} Ah · {bat.V} V</p>
                     {compatible && cnAh !== null && (
-                      <p className={cn("text-xs mt-1 font-medium", meetsCn ? "text-emerald-600" : "text-amber-600")}>
+                      <p className={cn("text-xs mt-1 font-medium", meetsCn ? "text-orange-600" : "text-amber-600")}>
                         {meetsCn ? `✓ Cumple Cn (${cnAh} Ah req.)` : `⚠ Insuf. — Cn req. ${cnAh} Ah`}
                       </p>
                     )}
@@ -782,7 +782,7 @@ const styles = `
   @apply w-full px-3 py-1.5 rounded-lg bg-transparent border border-transparent focus:bg-white focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-foreground transition-all;
 }
 .btn-primary {
-  @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+  @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
 }
 .btn-secondary {
   @apply inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold bg-white border border-border text-foreground shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:shadow transition-all duration-200;
