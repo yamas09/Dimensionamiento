@@ -34,16 +34,21 @@ function calcularDesdeCargas(
 
 // --- Cálculo de energía desde recibo de luz ---
 // promedio_consumo / periodo, potencia = energia_diaria / 24
+// precioProm = total_pesos / total_kwh  (precio ponderado por kWh)
 function calcularDesdeRecibo(
   registros: Array<{ consumo: number; precio: number }>,
   periodo: number
-): { energiaKwh: number; potenciaKw: number } {
+): { energiaKwh: number; potenciaKw: number; precioProm: number } {
   const promedioConsumo = registros.reduce((s, r) => s + r.consumo, 0) / registros.length;
   const energiaDiaria = promedioConsumo / periodo;
   const potenciaDiaria = energiaDiaria / 24; // kW
+  const totalConsumo = registros.reduce((s, r) => s + r.consumo, 0);
+  const totalPrecio = registros.reduce((s, r) => s + r.precio, 0);
+  const precioProm = totalConsumo > 0 ? totalPrecio / totalConsumo : 0;
   return {
     energiaKwh: parseFloat(energiaDiaria.toFixed(6)),
     potenciaKw: parseFloat(potenciaDiaria.toFixed(6)),
+    precioProm: parseFloat(precioProm.toFixed(4)),
   };
 }
 
@@ -205,6 +210,74 @@ function calcularFusibleInterconectado(isc: number): number {
 }
 
 // ===================================================================
+// MÓDULO ECONÓMICO — fórmulas fieles al código Python (economico.py)
+// ===================================================================
+
+// costo_paneles: num_paneles * costo_unitario_panel
+function costoPaneles(numPaneles: number, costoUnitario: number): number {
+  return parseFloat((numPaneles * costoUnitario).toFixed(2));
+}
+
+// costo_total_sistema_ais: suma de todos los costos incluyendo baterías
+function costoTotalAislado(
+  costoPanelTotal: number,
+  costoInversor: number,
+  costoRegulador: number,
+  costoBaterias: number,
+  costoProtecciones: number,
+  costoInstalacion: number
+): number {
+  return parseFloat(
+    (costoPanelTotal + costoInversor + costoRegulador + costoBaterias + costoProtecciones + costoInstalacion).toFixed(2)
+  );
+}
+
+// costo_total_sistema_int: suma sin baterías
+function costoTotalInterconectado(
+  costoPanelTotal: number,
+  costoInversor: number,
+  costoInstalacion: number,
+  costoProtecciones: number,
+  costoRegulador: number
+): number {
+  return parseFloat(
+    (costoPanelTotal + costoInversor + costoInstalacion + costoProtecciones + costoRegulador).toFixed(2)
+  );
+}
+
+// ahorro_anual = energia_anual_kwh * precio_kwh
+function ahorroAnual(energiaAnualKwh: number, precioKwh: number): number {
+  return parseFloat((energiaAnualKwh * precioKwh).toFixed(2));
+}
+
+// periodo_retorno = costo_total / ahorro_anual
+function periodoRetorno(costoTotal: number, ahorro: number): number | null {
+  if (ahorro === 0) return null;
+  return parseFloat((costoTotal / ahorro).toFixed(2));
+}
+
+// ahorro_economico_vida_util: vector de ahorros anuales con degradación
+// y su acumulado (cumsum)
+function calcularVectorAhorros(
+  energiaAnualInicial: number,
+  precioKwh: number,
+  tasaDegradacion = 0.005,
+  vidaUtil = 25
+): { vectorAhorros: number[]; ahorrosAcumulados: number[]; ahorroTotal: number } {
+  const vectorAhorros: number[] = [];
+  const ahorrosAcumulados: number[] = [];
+  let acumulado = 0;
+  for (let n = 0; n < vidaUtil; n++) {
+    const energia = energiaAnualInicial * Math.pow(1 - tasaDegradacion, n);
+    const ahorro = parseFloat((energia * precioKwh).toFixed(2));
+    vectorAhorros.push(ahorro);
+    acumulado = parseFloat((acumulado + ahorro).toFixed(2));
+    ahorrosAcumulados.push(acumulado);
+  }
+  return { vectorAhorros, ahorrosAcumulados, ahorroTotal: acumulado };
+}
+
+// ===================================================================
 // MÓDULO AMBIENTAL
 // ===================================================================
 
@@ -242,6 +315,7 @@ router.post("/calcular", (req, res) => {
   // 1. Energía y potencia diaria
   let energiaKwh: number;
   let potenciaKw: number;
+  let precioKwhRecibo: number | undefined;
 
   if (data.metodoPerfil === "cargas") {
     if (!data.cargas || data.cargas.length === 0) {
@@ -262,6 +336,7 @@ router.post("/calcular", (req, res) => {
     const r = calcularDesdeRecibo(data.registrosRecibo, periodo);
     energiaKwh = r.energiaKwh;
     potenciaKw = r.potenciaKw;
+    precioKwhRecibo = r.precioProm;
   }
 
   // 2. Paneles
@@ -384,6 +459,52 @@ router.post("/calcular", (req, res) => {
     (ahorrosCo2.reduce((s, v) => s + v, 0) / 1000).toFixed(2)
   );
 
+  // 9. Económico (solo si el usuario proporcionó los costos y no es bombeo)
+  let economicoResult: CalcularSFVResponse["economico"] | undefined;
+  if (data.tipoSistema !== "bombeo" && data.costoPorPanel !== undefined) {
+    // Determinar precio de electricidad
+    const precioKwh = data.metodoPerfil === "recibo"
+      ? (precioKwhRecibo ?? 0)
+      : (data.precioKwh ?? 0);
+
+    // Costo total del sistema
+    const costoPanelTotal = costoPaneles(totalPaneles, data.costoPorPanel);
+    let costoTotal: number;
+    if (data.tipoSistema === "aislado") {
+      costoTotal = costoTotalAislado(
+        costoPanelTotal,
+        data.costoInversor ?? 0,
+        data.costoRegulador ?? 0,
+        data.costoBaterias ?? 0,
+        data.costoProtecciones ?? 0,
+        data.costoInstalacion ?? 0
+      );
+    } else {
+      // interconectado
+      costoTotal = costoTotalInterconectado(
+        costoPanelTotal,
+        data.costoInversor ?? 0,
+        data.costoInstalacion ?? 0,
+        data.costoProtecciones ?? 0,
+        data.costoRegulador ?? 0
+      );
+    }
+
+    const ahorroPrimerAnio = ahorroAnual(energiaAnualKwh, precioKwh);
+    const payback = periodoRetorno(costoTotal, ahorroPrimerAnio);
+    const { vectorAhorros, ahorrosAcumulados, ahorroTotal } = calcularVectorAhorros(energiaAnualKwh, precioKwh);
+
+    economicoResult = {
+      costoTotal,
+      precioKwh: parseFloat(precioKwh.toFixed(4)),
+      ahorroPrimerAnio,
+      ahorroTotal,
+      payback,
+      vectorAhorros,
+      ahorrosAcumulados,
+    };
+  }
+
   const resultado: CalcularSFVResponse = {
     energiaDiariaKwh: energiaKwh,
     potenciaDemandaKw: potenciaKw,
@@ -406,6 +527,7 @@ router.post("/calcular", (req, res) => {
       vectorAhorrosCo2: ahorrosCo2,
       vectorDegradacion: degradacion,
     },
+    ...(economicoResult ? { economico: economicoResult } : {}),
   };
 
   res.json(resultado);

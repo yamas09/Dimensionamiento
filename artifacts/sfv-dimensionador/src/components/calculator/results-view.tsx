@@ -1,6 +1,6 @@
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from "recharts";
 import { SFVResultado } from "@workspace/api-client-react";
-import { Leaf, Sun, Zap, Battery, ShieldAlert, Cpu, Activity, Info } from "lucide-react";
+import { Leaf, Sun, Zap, Battery, ShieldAlert, Cpu, Activity, Info, DollarSign, TrendingUp, PiggyBank, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ResultsViewProps {
@@ -266,6 +266,103 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </div>
         </div>
       </div>
+
+      {/* ── SECCIÓN ECONÓMICA ── */}
+      {data.economico && (() => {
+        const eco = data.economico;
+        const econData = eco.vectorAhorros.map((ahorro, i) => ({
+          year: i + 1,
+          ahorro,
+          acumulado: eco.ahorrosAcumulados[i],
+        }));
+        const fmt = (n: number) =>
+          n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 pt-2">
+              <div className="h-px flex-1 bg-border" />
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground px-3">
+                <DollarSign className="w-4 h-4" /> Análisis Económico
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Métricas económicas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                title="Inversión Total"
+                value={`$${fmt(eco.costoTotal)}`}
+                unit="MXN"
+                icon={<DollarSign className="w-5 h-5 text-violet-500" />}
+                colorClass="bg-violet-50"
+              />
+              <MetricCard
+                title="Payback"
+                value={eco.payback !== null ? eco.payback.toFixed(1) : "—"}
+                unit={eco.payback !== null ? "años" : ""}
+                icon={<Clock className="w-5 h-5 text-blue-500" />}
+                colorClass="bg-blue-50"
+              />
+              <MetricCard
+                title="Ahorro 1er Año"
+                value={`$${fmt(eco.ahorroPrimerAnio)}`}
+                unit="MXN"
+                icon={<TrendingUp className="w-5 h-5 text-orange-500" />}
+                colorClass="bg-orange-50"
+              />
+              <MetricCard
+                title="Ahorro Total (25 años)"
+                value={`$${fmt(eco.ahorroTotal)}`}
+                unit="MXN"
+                icon={<PiggyBank className="w-5 h-5 text-green-500" />}
+                colorClass="bg-green-50"
+              />
+            </div>
+
+            {/* Gráfica de ahorro acumulado */}
+            <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
+              <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Ahorro Económico Acumulado (25 Años)
+              </h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={econData} margin={{ top: 5, right: 20, bottom: 30, left: 65 }}>
+                    <defs>
+                      <linearGradient id="colorAhorro" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                    <XAxis
+                      dataKey="year"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#64748B' }}
+                      label={{ value: 'Años', position: 'insideBottom', offset: -15, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: '#64748B' }}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                      label={{ value: 'Ahorro [$MXN]', angle: -90, position: 'insideLeft', offset: -45, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      formatter={(val: number) => [`$${fmt(val)} MXN`, 'Ahorro Acumulado']}
+                      labelFormatter={(val) => `Año ${val}`}
+                    />
+                    <Area type="monotone" dataKey="acumulado" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorAhorro)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

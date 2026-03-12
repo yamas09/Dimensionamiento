@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
-import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign } from "lucide-react";
 import { SolarPanelIcon } from "@/components/icons";
 import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
@@ -41,6 +41,14 @@ const sfvSchema = z.object({
   bateriaSeleccionMetodo: z.enum(["catalogo", "manual"]).optional(),
   bateriaAh: z.coerce.number().optional(),
   bateriaV: z.coerce.number().optional(),
+  // Módulo económico
+  costoPorPanel:    z.coerce.number().min(0).optional(),
+  costoInversor:    z.coerce.number().min(0).optional(),
+  costoBaterias:    z.coerce.number().min(0).optional(),
+  costoRegulador:   z.coerce.number().min(0).optional(),
+  costoProtecciones: z.coerce.number().min(0).optional(),
+  costoInstalacion: z.coerce.number().min(0).optional(),
+  precioKwh:        z.coerce.number().min(0).optional(),
 }).superRefine((data, ctx) => {
   if (data.metodoPerfil === "cargas" && (!data.cargas || data.cargas.length === 0)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Agrega al menos una carga", path: ["cargas"] });
@@ -61,16 +69,32 @@ const sfvSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["diasAutonomia"] });
     }
   }
+  // Validación del módulo económico (requerido para sistemas no-bombeo)
+  if (data.tipoSistema !== "bombeo") {
+    const reqEcon = ["costoPorPanel", "costoInversor", "costoRegulador", "costoProtecciones", "costoInstalacion"] as const;
+    for (const f of reqEcon) {
+      if (data[f] === undefined || data[f] === null) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: [f] });
+      }
+    }
+    if (data.tipoSistema === "aislado" && (data.costoBaterias === undefined || data.costoBaterias === null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["costoBaterias"] });
+    }
+    if (data.metodoPerfil === "cargas" && (data.precioKwh === undefined || data.precioKwh === null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["precioKwh"] });
+    }
+  }
 });
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// id 3 = Ficha técnica (Panel), id 4 = Baterías (solo aislado)
+// id 3 = Ficha técnica, id 4 = Baterías (aislado), id 5 = Económico (no bombeo)
 const STEPS = [
   { id: 1, title: "Ubicación",     icon: MapPin },
   { id: 2, title: "Perfil",        icon: Zap },
   { id: 3, title: "Ficha técnica", icon: SolarPanelIcon },
   { id: 4, title: "Baterías",      icon: Battery },
+  { id: 5, title: "Económico",     icon: DollarSign },
 ];
 
 interface CalculatorPageProps {
@@ -103,6 +127,13 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
       bateriaSeleccionMetodo: "catalogo",
       bateriaAh: undefined,
       bateriaV: undefined,
+      costoPorPanel: undefined,
+      costoInversor: undefined,
+      costoBaterias: undefined,
+      costoRegulador: undefined,
+      costoProtecciones: undefined,
+      costoInstalacion: undefined,
+      precioKwh: undefined,
     },
     mode: "onChange"
   });
@@ -115,15 +146,19 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
 
   // Paso 4 (Baterías) solo aparece para sistemas aislados
+  // Paso 5 (Económico) aparece para aislado e interconectado (no bombeo)
   const visibleSteps = STEPS.filter(s => {
     if (s.id === 4 && tipoSistema !== "aislado") return false;
+    if (s.id === 5 && tipoSistema === "bombeo") return false;
     return true;
   });
 
-  // Si el usuario cambia el tipo de sistema mientras está en el paso de Baterías (id 4),
-  // regresarlo al paso 3 (Panel) para que no quede en un paso invisible.
+  // Si el usuario cambia el tipo de sistema, regresar a un paso visible
   useEffect(() => {
     if (tipoSistema !== "aislado" && activeStep === 4) {
+      setActiveStep(3);
+    }
+    if (tipoSistema === "bombeo" && activeStep === 5) {
       setActiveStep(3);
     }
   }, [tipoSistema]);
@@ -138,6 +173,13 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     if (activeStep === 3) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
     // Paso 4 = Baterías (solo para aislado): valida los campos de batería antes de calcular
     if (activeStep === 4) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
+    // Paso 5 = Económico: valida costos y precio de electricidad
+    if (activeStep === 5) {
+      const econFields: string[] = ["costoPorPanel", "costoInversor", "costoRegulador", "costoProtecciones", "costoInstalacion"];
+      if (tipoSistema === "aislado") econFields.push("costoBaterias");
+      if (metodoPerfil === "cargas") econFields.push("precioKwh");
+      fieldsToValidate = econFields;
+    }
     
     const isValid = await trigger(fieldsToValidate as any);
     
@@ -367,6 +409,17 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                       setValue={setValue}
                       tipoBateria={tipoBateria}
                       bateriaSeleccionMetodo={bateriaSeleccionMetodo}
+                    />
+                  )}
+
+                  {/* STEP 5 — Módulo Económico */}
+                  {activeStep === 5 && (
+                    <EconomicoStep
+                      register={methods.register}
+                      errors={errors}
+                      tipoSistema={tipoSistema}
+                      metodoPerfil={metodoPerfil}
+                      registrosRecibo={watch("registrosRecibo") || []}
                     />
                   )}
 
@@ -776,6 +829,83 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ================= Económico Step Component =================
+function EconomicoStep({ register, errors, tipoSistema, metodoPerfil, registrosRecibo }: any) {
+  // Calcular precio promedio desde recibos (solo para mostrar al usuario)
+  const precioKwhCalculado = (() => {
+    if (metodoPerfil !== "recibo" || !registrosRecibo.length) return null;
+    const totalConsumo = registrosRecibo.reduce((s: number, r: any) => s + (r.consumo || 0), 0);
+    const totalPrecio  = registrosRecibo.reduce((s: number, r: any) => s + (r.precio  || 0), 0);
+    return totalConsumo > 0 ? (totalPrecio / totalConsumo).toFixed(4) : null;
+  })();
+
+  const MoneyInput = ({ name, label, error, placeholder = "0.00" }: { name: string; label: string; error?: string; placeholder?: string }) => (
+    <FormField label={label} error={error}>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm pointer-events-none">$</span>
+        <input
+          type="number"
+          step="any"
+          min="0"
+          {...register(name)}
+          className="input-field pl-8"
+          placeholder={placeholder}
+        />
+      </div>
+    </FormField>
+  );
+
+  return (
+    <div className="space-y-8">
+      <div className="border-b border-border pb-4">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <DollarSign className="w-6 h-6 text-primary" /> Análisis Económico
+        </h2>
+        <p className="text-muted-foreground mt-1">
+          Ingresa los costos del sistema para calcular el retorno de inversión y el ahorro económico en 25 años.
+        </p>
+      </div>
+
+      {/* Costos del sistema */}
+      <div>
+        <h3 className="text-base font-semibold text-foreground mb-4">Costos del Sistema [$MX]</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <MoneyInput name="costoPorPanel"     label="Costo por panel"             error={errors.costoPorPanel?.message} />
+          <MoneyInput name="costoInversor"     label="Costo del inversor"          error={errors.costoInversor?.message} />
+          {tipoSistema === "aislado" && (
+            <MoneyInput name="costoBaterias"   label="Costo banco de baterías"     error={errors.costoBaterias?.message} />
+          )}
+          <MoneyInput name="costoRegulador"    label="Costo del regulador"         error={errors.costoRegulador?.message} />
+          <MoneyInput name="costoProtecciones" label="Costo de protecciones"       error={errors.costoProtecciones?.message} />
+          <MoneyInput name="costoInstalacion"  label="Costo de instalación"        error={errors.costoInstalacion?.message} />
+        </div>
+      </div>
+
+      {/* Precio de electricidad */}
+      <div>
+        <h3 className="text-base font-semibold text-foreground mb-4">Precio de la Electricidad</h3>
+        {metodoPerfil === "recibo" ? (
+          <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 max-w-md">
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-700">Precio derivado de tus recibos</p>
+              {precioKwhCalculado ? (
+                <p className="text-lg font-bold text-blue-800 mt-1">${precioKwhCalculado} <span className="text-sm font-normal">MX/kWh</span></p>
+              ) : (
+                <p className="text-sm text-blue-600 mt-1">Se calculará a partir del historial de recibos ingresado.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="max-w-xs">
+            <MoneyInput name="precioKwh" label="Precio de electricidad [$/kWh]" error={errors.precioKwh?.message} placeholder="Ej. 3.50" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

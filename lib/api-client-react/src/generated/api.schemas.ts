@@ -80,6 +80,20 @@ export interface SFVInput {
   bateriaAh?: number;
   /** Voltaje nominal de la batería seleccionada [V] */
   bateriaV?: number;
+  /** Costo unitario por panel [$MX] */
+  costoPorPanel?: number;
+  /** Costo del inversor [$MX] */
+  costoInversor?: number;
+  /** Costo del banco de baterías [$MX] — solo sistema aislado */
+  costoBaterias?: number;
+  /** Costo del regulador/controlador de carga [$MX] */
+  costoRegulador?: number;
+  /** Costo de protecciones [$MX] */
+  costoProtecciones?: number;
+  /** Costo de instalación [$MX] */
+  costoInstalacion?: number;
+  /** Precio de la electricidad [$MX/kWh] — requerido cuando metodoPerfil=cargas */
+  precioKwh?: number;
 }
 
 export interface ResultadoPaneles {
@@ -129,6 +143,16 @@ export interface ResultadoAmbiental {
   vectorDegradacion: number[];
 }
 
+export interface ResultadoEconomico {
+  costoTotal: number;
+  precioKwh: number;
+  ahorroPrimerAnio: number;
+  ahorroTotal: number;
+  payback: number | null;
+  vectorAhorros: number[];
+  ahorrosAcumulados: number[];
+}
+
 export interface SFVResultado {
   energiaDiariaKwh: number;
   potenciaDemandaKw: number;
@@ -139,4 +163,5 @@ export interface SFVResultado {
   cableado: ResultadoCableado;
   protecciones?: ResultadoProtecciones;
   ambiental: ResultadoAmbiental;
+  economico?: ResultadoEconomico;
 }

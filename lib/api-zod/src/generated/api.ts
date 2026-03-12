@@ -60,6 +60,13 @@ export const CalcularSFVBody = zod.object({
     .number()
     .optional()
     .describe("Voltaje nominal de la batería seleccionada [V]"),
+  costoPorPanel: zod.number().optional(),
+  costoInversor: zod.number().optional(),
+  costoBaterias: zod.number().optional(),
+  costoRegulador: zod.number().optional(),
+  costoProtecciones: zod.number().optional(),
+  costoInstalacion: zod.number().optional(),
+  precioKwh: zod.number().optional(),
 });
 
 export const CalcularSFVResponse = zod.object({
@@ -113,4 +120,15 @@ export const CalcularSFVResponse = zod.object({
     vectorAhorrosCo2: zod.array(zod.number()),
     vectorDegradacion: zod.array(zod.number()),
   }),
+  economico: zod
+    .object({
+      costoTotal: zod.number(),
+      precioKwh: zod.number(),
+      ahorroPrimerAnio: zod.number(),
+      ahorroTotal: zod.number(),
+      payback: zod.number().nullable(),
+      vectorAhorros: zod.array(zod.number()),
+      ahorrosAcumulados: zod.array(zod.number()),
+    })
+    .optional(),
 });
