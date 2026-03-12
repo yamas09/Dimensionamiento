@@ -208,7 +208,7 @@ function calcularFusibleInterconectado(isc: number): number {
 // MÓDULO AMBIENTAL
 // ===================================================================
 
-const FACTOR_EMISION_CO2 = 0.454; // kg CO2 / kWh (CFE México)
+const FACTOR_EMISION_CO2 = 0.444; // kg CO2e / kWh (SEMARNAT 2024, SEN)
 const DEGRADACION_ANUAL = 0.005;   // 0.5 % anual
 const VIDA_UTIL = 25;
 
