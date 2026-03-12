@@ -8,4 +8,9 @@
 
 export interface ResultadoProtecciones {
   corrienteFusible: number;
+  breakerCC?: number;
+  seccionadorVoltaje?: number;
+  seccionadorCorriente?: number;
+  sobretensionesVoltaje?: number;
+  termomagneticoCorriente?: number;
 }

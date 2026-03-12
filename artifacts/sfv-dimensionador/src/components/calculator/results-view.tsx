@@ -50,7 +50,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
         <MetricCard 
           title="Ahorro CO₂ (1er Año)" 
           value={`${data.ambiental.ahorroCo2PrimerAnio.toFixed(2)}`} 
-          unit="Ton" 
+          unit="kg CO₂" 
           icon={<Leaf className="w-5 h-5 text-emerald-500" />} 
           colorClass="bg-emerald-50"
         />
@@ -135,10 +135,38 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
               <span className="font-bold">{data.cableado.corrienteMinima.toFixed(2)} A</span>
             </div>
             {data.protecciones && (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground font-medium">Protecciones (Fusible)</span>
-                <span className="font-bold text-destructive">{data.protecciones.corrienteFusible.toFixed(2)} A</span>
-              </div>
+              <>
+                <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                  <span className="text-muted-foreground font-medium">Fusible CC</span>
+                  <span className="font-bold text-destructive">{data.protecciones.corrienteFusible.toFixed(2)} A</span>
+                </div>
+                {data.protecciones.breakerCC !== undefined && (
+                  <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">Breaker CC</span>
+                    <span className="font-bold text-destructive">{data.protecciones.breakerCC.toFixed(2)} A</span>
+                  </div>
+                )}
+                {data.protecciones.seccionadorVoltaje !== undefined && (
+                  <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">Interruptor Seccionador</span>
+                    <span className="font-bold text-destructive">
+                      {data.protecciones.seccionadorVoltaje.toFixed(2)} V / {data.protecciones.seccionadorCorriente?.toFixed(2)} A
+                    </span>
+                  </div>
+                )}
+                {data.protecciones.sobretensionesVoltaje !== undefined && (
+                  <div className="flex justify-between items-center pb-3 border-b border-border/50">
+                    <span className="text-muted-foreground font-medium">Protector Sobretensiones</span>
+                    <span className="font-bold text-destructive">{data.protecciones.sobretensionesVoltaje.toFixed(2)} V</span>
+                  </div>
+                )}
+                {data.protecciones.termomagneticoCorriente !== undefined && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">Termomagnético CA</span>
+                    <span className="font-bold text-destructive">{data.protecciones.termomagneticoCorriente.toFixed(2)} A</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -4,6 +4,25 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+## Dimensionador SFV
+
+Herramienta web para el dimensionamiento de sistemas fotovoltaicos (aislados, interconectados y bombeo).
+
+### Módulos implementados
+- **Eléctrico** (`artifacts/api-server/src/routes/sfv.ts`): Cálculos fieles al módulo Python `electrico.py`:
+  - Perfil de consumo por cargas (con factor 1.1 para AC) o por recibo (promedio/periodo)
+  - Número de paneles: `ceil(1.2 × E_dia / (P_kw × HSP))`
+  - Voltaje sistema: <2 kWh→12V, <4.5→24V, else→48V
+  - Baterías: DoD Plomo=0.7, Litio=0.9; `Cn=ceil(1.2×E×1000×Daut/(Vsist×DoD))`
+  - Catálogo de baterías Plomo (12V) y Litio (12/24/48V)
+  - Inversor: `max(Ic, I_sistema)` donde `Ic = P×par×ser / Vbat`
+  - Regulador: `Isc × 1.25 × N_paralelo`
+  - Cableado: `Isc × 1.25`
+  - Protecciones aislado: breaker CC, fusible CC, interruptor seccionador, protector sobretensiones, termomagnético CA
+  - Protecciones interconectado: fusible CC `Isc×1.5`, interruptor seccionador, sobretensiones
+- **Ambiental**: Degradación 0.5%/año, factor CFE México 0.454 kg CO₂/kWh, vida útil 25 años
+- **HSP por estado**: Valores reales de la base de datos del módulo Python
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

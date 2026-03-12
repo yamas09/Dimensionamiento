@@ -231,6 +231,16 @@ components:
       properties:
         corrienteFusible:
           type: number
+        breakerCC:
+          type: number
+        seccionadorVoltaje:
+          type: number
+        seccionadorCorriente:
+          type: number
+        sobretensionesVoltaje:
+          type: number
+        termomagneticoCorriente:
+          type: number
       required:
         - corrienteFusible
 
