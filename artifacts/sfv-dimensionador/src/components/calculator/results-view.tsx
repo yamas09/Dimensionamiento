@@ -197,15 +197,26 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
         <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary" />
-            Degradación de Energía (25 Años)
+            Energía generada (vida útil)
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={environmentalData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart data={environmentalData} margin={{ top: 5, right: 20, bottom: 30, left: 55 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip 
+                <XAxis
+                  dataKey="year"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748B' }}
+                  label={{ value: 'Años', position: 'insideBottom', offset: -15, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748B' }}
+                  label={{ value: 'Energía [kWh]', angle: -90, position: 'insideLeft', offset: -35, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                />
+                <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(val: number) => [`${val} kWh`, 'Energía Generada']}
                   labelFormatter={(val) => `Año ${val}`}
@@ -223,22 +234,33 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={environmentalData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <AreaChart data={environmentalData} margin={{ top: 5, right: 20, bottom: 30, left: 55 }}>
                 <defs>
                   <linearGradient id="colorCo2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                <Tooltip 
+                <XAxis
+                  dataKey="year"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748B' }}
+                  label={{ value: 'Años', position: 'insideBottom', offset: -15, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748B' }}
+                  label={{ value: 'Ahorro [tCO₂e]', angle: -90, position: 'insideLeft', offset: -35, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                />
+                <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  formatter={(val: number) => [`${val} Toneladas`, 'Ahorro Acumulado']}
+                  formatter={(val: number) => [`${val} tCO₂e`, 'Ahorro Acumulado']}
                   labelFormatter={(val) => `Año ${val}`}
                 />
-                <Area type="monotone" dataKey="co2" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorCo2)" />
+                <Area type="monotone" dataKey="co2" stroke="#f97316" strokeWidth={3} fillOpacity={1} fill="url(#colorCo2)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
