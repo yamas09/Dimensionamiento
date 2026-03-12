@@ -5,6 +5,7 @@ import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
 import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { SolarPanelIcon } from "@/components/icons";
 import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
 import { cn } from "@/lib/utils";
@@ -64,12 +65,12 @@ const sfvSchema = z.object({
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// id 3 = Panel, id 4 = Baterías (solo aislado)
+// id 3 = Ficha técnica (Panel), id 4 = Baterías (solo aislado)
 const STEPS = [
-  { id: 1, title: "Ubicación", icon: MapPin },
-  { id: 2, title: "Perfil",    icon: Zap },
-  { id: 3, title: "Panel",     icon: Sun },
-  { id: 4, title: "Baterías",  icon: Battery },
+  { id: 1, title: "Ubicación",     icon: MapPin },
+  { id: 2, title: "Perfil",        icon: Zap },
+  { id: 3, title: "Ficha técnica", icon: SolarPanelIcon },
+  { id: 4, title: "Baterías",      icon: Battery },
 ];
 
 interface CalculatorPageProps {
