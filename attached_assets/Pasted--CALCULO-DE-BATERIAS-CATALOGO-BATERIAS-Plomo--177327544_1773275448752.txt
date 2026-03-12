@@ -1,0 +1,87 @@
+#=================CALCULO DE BATERIAS===================
+
+CATALOGO_BATERIAS = {
+    "Plomo": [
+        {"modelo":"Plomo 100Ah 12V","Ah":100,"V":12},
+        {"modelo":"Plomo 150Ah 12V","Ah":150,"V":12},
+        {"modelo":"Plomo 200Ah 12V","Ah":200,"V":12},
+        {"modelo":"Plomo 250Ah 12V","Ah":250, "V":12}
+    ],
+    "Litio": [
+        {"modelo":"Litio 50Ah 48V","Ah":50,"V":48},
+        {"modelo":"Litio 100Ah 12V","Ah":100,"V":12},
+        {"modelo":"Litio 100Ah 24V","Ah":100,"V":24},
+        {"modelo":"Litio 100Ah 48V","Ah":100,"V":48},
+        {"modelo":"Litio 150Ah 12V","Ah":150,"V":12},
+        {"modelo":"Litio 150Ah 24V","Ah":150,"V":24},
+        {"modelo":"Litio 200Ah 12V","Ah":200,"V":12}
+    ]
+}
+
+#Se determina la DoD
+
+Descarga_tipo={ #Aquí es el tipo de bateria que se usará, con base en eso es la profunidad de descarga
+    "Plomo":0.7,
+    "Litio":0.9,
+}
+#Se tiene que tener dias de autonomía, se representara como Daut
+def calcular_capacidad_baterias(energia_diaria, tipo, Daut, Vnom_sistema):
+    if tipo not in Descarga_tipo:
+        raise ValueError("Tipo de batería no disponible en base de datos")
+    
+    DoD = Descarga_tipo[tipo]
+
+    Cn_Ah = ((1.2*energia_diaria*1000*Daut) / (Vnom_sistema * DoD))
+
+    return math.ceil(Cn_Ah), DoD
+
+#Con base en la capacidad total del banco, se propone que el usuario ingrese su valor de batería
+#a utilizar. Puede ser ingresada manualmente o escogida de una lista de opciones.
+
+def seleccionar_bateria(tipo):
+
+    if tipo not in Descarga_tipo:
+        raise ValueError("Tipo de batería no disponible")
+
+    opcion = input(
+        "\n¿Cómo desea seleccionar las características de la batería? Escriba el número\n"
+        " 1) Escoger del catálogo\n"
+        " 2) Ingresar valores manualmente\n"
+        "Selección: ")
+
+# Si se selecciona catálogo
+
+    if opcion=="1":
+
+        catalogo=CATALOGO_BATERIAS[tipo]
+
+        print("\nOpciones disponibles:")
+        for i, bat in enumerate(catalogo):
+            print(f"{i+1}) {bat['modelo']}")
+
+        seleccion=int(input("Seleccione el número de opción: "))
+
+        if seleccion<1 or seleccion>len(catalogo):
+            raise ValueError("Selección inválida")
+
+        bateria=catalogo[seleccion-1]
+        C_comercial=bateria["Ah"]
+        Vn_bateria=bateria["V"]
+
+#Si se selecciona ingresar manualmente
+
+    elif opcion=="2":
+        C_comercial = float(input("Ingrese capacidad de la batería [Ah]: "))
+        Vn_bateria = float(input("Ingrese voltaje nominal de la batería [V]: "))
+    else:
+        raise ValueError("Error. Por favor, escoja una de las dos opciones mostradas")
+
+    return C_comercial, Vn_bateria
+
+#Cálculo para baterias en serie
+def calcular_baterias_serie(Vnom_sistema, Vn_bateria):
+    return math.ceil(Vnom_sistema / Vn_bateria)
+
+#Cálculo para baterías en paralelo
+def calcular_baterias_paralelo(Cn_Ah, C_comercial):
+    return math.ceil(Cn_Ah / C_comercial)

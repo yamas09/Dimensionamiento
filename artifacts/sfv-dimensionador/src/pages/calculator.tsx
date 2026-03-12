@@ -5,7 +5,7 @@ import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
 import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2 } from "lucide-react";
-import { MEXICAN_STATES_HSP } from "@/lib/constants";
+import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,9 @@ const sfvSchema = z.object({
   panelVoc: z.coerce.number().min(1),
   tipoBateria: z.enum(["Plomo", "Litio"]).optional(),
   diasAutonomia: z.coerce.number().optional(),
+  bateriaSeleccionMetodo: z.enum(["catalogo", "manual"]).optional(),
+  bateriaAh: z.coerce.number().optional(),
+  bateriaV: z.coerce.number().optional(),
 }).superRefine((data, ctx) => {
   if (data.metodoPerfil === "cargas" && (!data.cargas || data.cargas.length === 0)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Agrega al menos una carga", path: ["cargas"] });
@@ -91,6 +94,9 @@ export default function CalculatorPage() {
       panelVoc: 49.8,
       tipoBateria: "Plomo",
       diasAutonomia: 2,
+      bateriaSeleccionMetodo: "catalogo",
+      bateriaAh: undefined,
+      bateriaV: undefined,
     },
     mode: "onChange"
   });
@@ -99,6 +105,8 @@ export default function CalculatorPage() {
 
   const tipoSistema = watch("tipoSistema");
   const metodoPerfil = watch("metodoPerfil");
+  const tipoBateria = watch("tipoBateria");
+  const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
 
   const visibleSteps = STEPS.filter(s => {
     if (s.id === 4 && tipoSistema !== "aislado") return false;
@@ -329,19 +337,122 @@ export default function CalculatorPage() {
                     <div className="space-y-6">
                       <div className="border-b border-border pb-4 mb-6">
                         <h2 className="text-2xl font-bold flex items-center gap-2"><Battery className="w-6 h-6 text-primary" /> Configuración de Baterías</h2>
-                        <p className="text-muted-foreground mt-1">Requerido para sistemas aislados.</p>
+                        <p className="text-muted-foreground mt-1">Selecciona el banco de baterías para el sistema aislado.</p>
                       </div>
+
+                      {/* Tipo de batería + días autonomía */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <FormField label="Tipo de Batería" error={errors.tipoBateria?.message}>
-                          <select {...methods.register("tipoBateria")} className="input-field">
-                            <option value="Plomo">Plomo-Ácido (DOD 50%)</option>
-                            <option value="Litio">Litio (DOD 80%)</option>
-                          </select>
+                          <Controller
+                            control={control}
+                            name="tipoBateria"
+                            render={({ field }) => (
+                              <div className="flex bg-muted p-1 rounded-xl">
+                                {(["Plomo", "Litio"] as const).map(t => (
+                                  <button
+                                    key={t} type="button"
+                                    onClick={() => {
+                                      field.onChange(t);
+                                      setValue("bateriaAh", undefined);
+                                      setValue("bateriaV", undefined);
+                                    }}
+                                    className={cn("flex-1 py-2 text-sm font-medium rounded-lg transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
+                                  >
+                                    {t} <span className="text-xs opacity-70">(DoD {(DOD_POR_TIPO[t] * 100).toFixed(0)}%)</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          />
                         </FormField>
-                        <FormField label="Días de Autonomía" error={errors.diasAutonomia?.message}>
-                          <input type="number" step="any" {...methods.register("diasAutonomia")} className="input-field" />
+                        <FormField label="Días de Autonomía (recomendado 1–3)" error={errors.diasAutonomia?.message}>
+                          <input type="number" step="any" min="1" max="10" {...methods.register("diasAutonomia")} className="input-field" />
                         </FormField>
                       </div>
+
+                      {/* Método de selección */}
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-3">¿Cómo desea especificar la batería?</p>
+                        <Controller
+                          control={control}
+                          name="bateriaSeleccionMetodo"
+                          render={({ field }) => (
+                            <div className="flex gap-3">
+                              {[
+                                { value: "catalogo", label: "Escoger del catálogo" },
+                                { value: "manual",   label: "Ingresar manualmente" },
+                              ].map(opt => (
+                                <button
+                                  key={opt.value} type="button"
+                                  onClick={() => {
+                                    field.onChange(opt.value);
+                                    setValue("bateriaAh", undefined);
+                                    setValue("bateriaV", undefined);
+                                  }}
+                                  className={cn(
+                                    "flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all text-center",
+                                    field.value === opt.value
+                                      ? "border-primary bg-primary/5 text-primary"
+                                      : "border-border text-muted-foreground hover:border-primary/40"
+                                  )}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        />
+                      </div>
+
+                      {/* Catálogo */}
+                      {bateriaSeleccionMetodo === "catalogo" && tipoBateria && (
+                        <div>
+                          <p className="text-sm font-semibold text-foreground mb-3">
+                            Modelos disponibles — {tipoBateria}
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {(CATALOGO_BATERIAS[tipoBateria] ?? []).map((bat) => {
+                              const isSelected = watch("bateriaAh") === bat.Ah && watch("bateriaV") === bat.V;
+                              return (
+                                <button
+                                  key={bat.modelo} type="button"
+                                  onClick={() => {
+                                    setValue("bateriaAh", bat.Ah, { shouldValidate: true });
+                                    setValue("bateriaV",  bat.V,  { shouldValidate: true });
+                                  }}
+                                  className={cn(
+                                    "flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-all",
+                                    isSelected
+                                      ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
+                                      : "border-border hover:border-primary/40 hover:bg-muted/50"
+                                  )}
+                                >
+                                  <div>
+                                    <p className={cn("font-semibold text-sm", isSelected ? "text-primary" : "text-foreground")}>{bat.modelo}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{bat.Ah} Ah  ·  {bat.V} V</p>
+                                  </div>
+                                  {isSelected && <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {!watch("bateriaAh") && (
+                            <p className="text-xs text-amber-600 font-medium mt-2">Selecciona un modelo del catálogo para continuar.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Manual */}
+                      {bateriaSeleccionMetodo === "manual" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 bg-muted/40 rounded-xl border border-border">
+                          <FormField label="Capacidad de la batería [Ah]" error={errors.bateriaAh?.message}>
+                            <input type="number" step="any" min="1" {...methods.register("bateriaAh")} className="input-field" placeholder="Ej. 200" />
+                          </FormField>
+                          <FormField label="Voltaje nominal de la batería [V]" error={errors.bateriaV?.message}>
+                            <input type="number" step="any" min="1" {...methods.register("bateriaV")} className="input-field" placeholder="Ej. 12" />
+                          </FormField>
+                        </div>
+                      )}
                     </div>
                   )}
 

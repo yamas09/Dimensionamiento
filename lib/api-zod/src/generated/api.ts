@@ -52,6 +52,14 @@ export const CalcularSFVBody = zod.object({
   panelVoc: zod.number(),
   tipoBateria: zod.enum(["Plomo", "Litio"]).optional(),
   diasAutonomia: zod.number().optional(),
+  bateriaAh: zod
+    .number()
+    .optional()
+    .describe("Capacidad comercial de la batería seleccionada [Ah]"),
+  bateriaV: zod
+    .number()
+    .optional()
+    .describe("Voltaje nominal de la batería seleccionada [V]"),
 });
 
 export const CalcularSFVResponse = zod.object({

@@ -285,11 +285,19 @@ router.post("/calcular", (req, res) => {
       data.diasAutonomia,
       voltajeSistema
     );
-    const { capacidadComercial, voltajeBateria: vBat } = seleccionarBateria(
-      data.tipoBateria,
-      capacidadAh,
-      voltajeSistema
-    );
+
+    // Si el usuario eligió una batería específica (catálogo o manual), usarla directamente;
+    // de lo contrario, auto-seleccionar del catálogo.
+    let capacidadComercial: number;
+    let vBat: number;
+    if (data.bateriaAh && data.bateriaV) {
+      capacidadComercial = data.bateriaAh;
+      vBat = data.bateriaV;
+    } else {
+      const seleccion = seleccionarBateria(data.tipoBateria, capacidadAh, voltajeSistema);
+      capacidadComercial = seleccion.capacidadComercial;
+      vBat = seleccion.voltajeBateria;
+    }
     voltajeBateria = vBat;
 
     const bateriasSerie = calcularBateriasSerie(voltajeSistema, vBat);

@@ -76,6 +76,10 @@ export interface SFVInput {
   panelVoc: number;
   tipoBateria?: SFVInputTipoBateria;
   diasAutonomia?: number;
+  /** Capacidad comercial de la batería seleccionada [Ah] */
+  bateriaAh?: number;
+  /** Voltaje nominal de la batería seleccionada [V] */
+  bateriaV?: number;
 }
 
 export interface ResultadoPaneles {

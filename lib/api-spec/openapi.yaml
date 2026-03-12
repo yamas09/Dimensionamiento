@@ -143,6 +143,12 @@ components:
           enum: ["Plomo", "Litio"]
         diasAutonomia:
           type: number
+        bateriaAh:
+          type: number
+          description: Capacidad comercial de la batería seleccionada [Ah]
+        bateriaV:
+          type: number
+          description: Voltaje nominal de la batería seleccionada [V]
       required:
         - latitud
         - longitud

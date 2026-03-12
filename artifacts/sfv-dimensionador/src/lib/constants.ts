@@ -1,3 +1,32 @@
+export interface BateriaModelo {
+  modelo: string;
+  Ah: number;
+  V: number;
+}
+
+export const CATALOGO_BATERIAS: Record<string, BateriaModelo[]> = {
+  Plomo: [
+    { modelo: "Plomo 100Ah 12V", Ah: 100, V: 12 },
+    { modelo: "Plomo 150Ah 12V", Ah: 150, V: 12 },
+    { modelo: "Plomo 200Ah 12V", Ah: 200, V: 12 },
+    { modelo: "Plomo 250Ah 12V", Ah: 250, V: 12 },
+  ],
+  Litio: [
+    { modelo: "Litio 50Ah 48V",  Ah:  50, V: 48 },
+    { modelo: "Litio 100Ah 12V", Ah: 100, V: 12 },
+    { modelo: "Litio 100Ah 24V", Ah: 100, V: 24 },
+    { modelo: "Litio 100Ah 48V", Ah: 100, V: 48 },
+    { modelo: "Litio 150Ah 12V", Ah: 150, V: 12 },
+    { modelo: "Litio 150Ah 24V", Ah: 150, V: 24 },
+    { modelo: "Litio 200Ah 12V", Ah: 200, V: 12 },
+  ],
+};
+
+export const DOD_POR_TIPO: Record<string, number> = {
+  Plomo: 0.7,
+  Litio: 0.9,
+};
+
 export const MEXICAN_STATES_HSP: Record<string, number> = {
   "Aguascalientes": 6.67,
   "Baja California": 6.93,
