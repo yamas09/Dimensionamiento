@@ -87,7 +87,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const methods = useForm<FormData>({
     resolver: zodResolver(sfvSchema),
     defaultValues: {
-      tipoSistema: "interconectado",
+      tipoSistema: "aislado",
       metodoPerfil: "cargas",
       cargas: [{ elemento: "Focos", tipoCarga: "AC", cantidad: 5, potencia: 15, horas: 4 }],
       registrosRecibo: [{ consumo: 300, precio: 500 }],
@@ -172,7 +172,14 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   if (result) {
     return (
       <div className="max-w-7xl mx-auto p-4 md:p-8 pt-6">
-        <ResultsView data={result} onReset={() => setResult(null)} />
+        <ResultsView
+          data={result}
+          onReset={() => {
+            setResult(null);
+            setActiveStep(1);
+            methods.reset();
+          }}
+        />
       </div>
     );
   }
