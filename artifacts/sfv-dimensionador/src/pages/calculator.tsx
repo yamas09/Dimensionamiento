@@ -191,7 +191,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
           Dimensionador <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-500">SFV</span>
         </h1>
         <p className="mt-3 text-muted-foreground text-lg max-w-2xl mx-auto">
-          Ingresa los parámetros de tu proyecto para obtener el dimensionamiento técnico y análisis ambiental.
+          Ingresa los parámetros de tu proyecto para obtener el dimensionamiento de tu SFV.
         </p>
       </div>
 
