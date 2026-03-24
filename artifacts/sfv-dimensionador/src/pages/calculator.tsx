@@ -69,32 +69,18 @@ const sfvSchema = z.object({
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["diasAutonomia"] });
     }
   }
-  // Validación del módulo económico (requerido para sistemas no-bombeo)
-  if (data.tipoSistema !== "bombeo") {
-    const reqEcon = ["costoPorPanel", "costoInversor", "costoRegulador", "costoProtecciones", "costoInstalacion"] as const;
-    for (const f of reqEcon) {
-      if (data[f] === undefined || data[f] === null) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: [f] });
-      }
-    }
-    if (data.tipoSistema === "aislado" && (data.costoBaterias === undefined || data.costoBaterias === null)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["costoBaterias"] });
-    }
-    if (data.metodoPerfil === "cargas" && (data.precioKwh === undefined || data.precioKwh === null)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["precioKwh"] });
-    }
-  }
+  // Los campos económicos son opcionales (el usuario puede omitir el análisis de rentabilidad)
 });
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// id 3 = Ficha técnica, id 4 = Baterías (aislado), id 5 = Económico (no bombeo)
+// id 3 = Ficha técnica, id 4 = Baterías (aislado), id 5 = Rentabilidad (no bombeo)
 const STEPS = [
   { id: 1, title: "Ubicación",     icon: MapPin },
   { id: 2, title: "Perfil",        icon: Zap },
   { id: 3, title: "Ficha técnica", icon: SolarPanelIcon },
   { id: 4, title: "Baterías",      icon: Battery },
-  { id: 5, title: "Económico",     icon: DollarSign },
+  { id: 5, title: "Rentabilidad",  icon: DollarSign },
 ];
 
 interface CalculatorPageProps {
@@ -104,6 +90,7 @@ interface CalculatorPageProps {
 
 export default function CalculatorPage({ result, setResult }: CalculatorPageProps) {
   const [activeStep, setActiveStep] = useState(1);
+  const [omitirEconomico, setOmitirEconomico] = useState(false);
   const { toast } = useToast();
 
   const calculateMutation = useCalcularSFV();
@@ -173,8 +160,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     if (activeStep === 3) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
     // Paso 4 = Baterías (solo para aislado): valida los campos de batería antes de calcular
     if (activeStep === 4) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
-    // Paso 5 = Económico: valida costos y precio de electricidad
-    if (activeStep === 5) {
+    // Paso 5 = Rentabilidad: valida costos solo si no se omite
+    if (activeStep === 5 && !omitirEconomico) {
       const econFields: string[] = ["costoPorPanel", "costoInversor", "costoRegulador", "costoProtecciones", "costoInstalacion"];
       if (tipoSistema === "aislado") econFields.push("costoBaterias");
       if (metodoPerfil === "cargas") econFields.push("precioKwh");
@@ -198,6 +185,19 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     if (currentIdx > 0) {
       setActiveStep(visibleSteps[currentIdx - 1].id);
     }
+  };
+
+  const handleOmitir = () => {
+    // Limpia los campos económicos y omite el análisis de rentabilidad
+    setValue("costoPorPanel", undefined as any);
+    setValue("costoInversor", undefined as any);
+    setValue("costoBaterias", undefined as any);
+    setValue("costoRegulador", undefined as any);
+    setValue("costoProtecciones", undefined as any);
+    setValue("costoInstalacion", undefined as any);
+    setValue("precioKwh", undefined as any);
+    setOmitirEconomico(true);
+    handleSubmit(onSubmit)();
   };
 
   const onSubmit = async (data: FormData) => {
@@ -237,36 +237,52 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start flex-1">
-        {/* Sidebar Navigation */}
-        <div className="w-full lg:w-64 shrink-0 bg-white p-6 rounded-2xl shadow-lg border border-border shadow-black/5 sticky top-24">
-          <nav className="flex lg:flex-col gap-2 overflow-x-auto custom-scrollbar pb-2 lg:pb-0">
-            {visibleSteps.map((step, idx) => {
-              const isActive = activeStep === step.id;
-              const isPast = activeStep > step.id;
-              const Icon = step.icon;
-              return (
-                <div key={step.id} className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl transition-all min-w-[140px] lg:min-w-0",
-                  isActive ? "bg-primary/10 text-primary font-semibold" : 
-                  isPast ? "text-foreground font-medium" : "text-muted-foreground"
-                )}>
+      {/* Horizontal Step Flow */}
+      <div className="mb-6 overflow-x-auto custom-scrollbar pb-2">
+        <div className="flex items-center justify-center min-w-max mx-auto px-2">
+          {visibleSteps.map((step, idx) => {
+            const isActive = activeStep === step.id;
+            const isPast = activeStep > step.id;
+            const Icon = step.icon;
+            return (
+              <div key={step.id} className="flex items-center">
+                {/* Step node */}
+                <div className="flex flex-col items-center gap-1.5 group">
                   <div className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full shrink-0",
-                    isActive ? "bg-primary text-white shadow-md shadow-primary/30" : 
-                    isPast ? "bg-orange-100 text-orange-600" : "bg-muted text-muted-foreground"
+                    "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300",
+                    isActive
+                      ? "bg-primary border-primary text-white shadow-lg shadow-primary/30 scale-110"
+                      : isPast
+                        ? "bg-orange-50 border-orange-300 text-orange-500"
+                        : "bg-white border-border text-muted-foreground"
                   )}>
-                    {isPast ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                    {isPast
+                      ? <CheckCircle2 className="w-5 h-5 text-orange-500" />
+                      : <Icon className="w-4 h-4" />
+                    }
                   </div>
-                  <span className="whitespace-nowrap">{step.title}</span>
+                  <span className={cn(
+                    "text-xs font-semibold whitespace-nowrap transition-colors",
+                    isActive ? "text-primary" : isPast ? "text-orange-500" : "text-muted-foreground"
+                  )}>
+                    {step.title}
+                  </span>
                 </div>
-              );
-            })}
-          </nav>
+                {/* Connector line */}
+                {idx < visibleSteps.length - 1 && (
+                  <div className={cn(
+                    "h-0.5 w-10 sm:w-16 mx-1 rounded-full transition-colors duration-300",
+                    activeStep > step.id ? "bg-orange-300" : "bg-border"
+                  )} />
+                )}
+              </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Form Area */}
-        <div className="flex-1 w-full bg-white p-6 md:p-8 rounded-2xl shadow-xl shadow-black/5 border border-border">
+      {/* Form Area - full width */}
+      <div className="flex-1 w-full bg-white p-6 md:p-8 rounded-2xl shadow-xl shadow-black/5 border border-border">
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
             <div className="flex-1 min-h-[400px]">
               <AnimatePresence mode="wait">
@@ -428,7 +444,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
             </div>
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between items-center mt-10 pt-6 border-t border-border">
+            <div className="flex flex-wrap justify-between items-center gap-3 mt-10 pt-6 border-t border-border">
               <button
                 type="button"
                 onClick={prevStep}
@@ -438,27 +454,40 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                 <ArrowLeft className="w-4 h-4 mr-2" /> Atrás
               </button>
               
-              {!isLastStep ? (
-                <button type="button" onClick={nextStep} className="btn-primary">
-                  Siguiente <ArrowRight className="w-4 h-4 ml-2" />
-                </button>
-              ) : (
-                <button 
-                  type="submit" 
-                  disabled={calculateMutation.isPending}
-                  className="btn-primary"
-                >
-                  {calculateMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Calculando...</>
-                  ) : (
-                    <><Zap className="w-4 h-4 mr-2" /> Calcular Sistema</>
-                  )}
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {/* Botón Omitir: solo visible en el paso de Rentabilidad */}
+                {isLastStep && activeStep === 5 && (
+                  <button
+                    type="button"
+                    onClick={handleOmitir}
+                    disabled={calculateMutation.isPending}
+                    className="px-5 py-2.5 rounded-xl font-medium border-2 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
+                  >
+                    Omitir análisis
+                  </button>
+                )}
+
+                {!isLastStep ? (
+                  <button type="button" onClick={nextStep} className="btn-primary">
+                    Siguiente <ArrowRight className="w-4 h-4 ml-2" />
+                  </button>
+                ) : (
+                  <button 
+                    type="submit" 
+                    disabled={calculateMutation.isPending}
+                    className="btn-primary"
+                  >
+                    {calculateMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Calculando...</>
+                    ) : (
+                      <><Zap className="w-4 h-4 mr-2" /> Calcular Sistema</>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </form>
         </div>
-      </div>
     </div>
   );
 }
