@@ -59,6 +59,8 @@ export const SFVInputTipoBateria = {
   Litio: "Litio",
 } as const;
 
+export type TipoCombustible = "electrico" | "diesel";
+
 export interface SFVInput {
   latitud: number;
   longitud: number;
@@ -80,6 +82,18 @@ export interface SFVInput {
   bateriaAh?: number;
   /** Voltaje nominal de la batería seleccionada [V] */
   bateriaV?: number;
+  // ── Bombeo ──
+  /** Volumen a bombear por día [L] */
+  volumenLitros?: number;
+  /** Profundidad agua-suelo [m] */
+  alturaDebajo?: number;
+  /** Altura suelo-tanque [m] */
+  alturaEncima?: number;
+  /** Usar HSP como horas de bombeo */
+  usarHspParaBombeo?: boolean;
+  /** Horas de bombeo diarias (manual) [h] */
+  horasBombeoManual?: number;
+  // ── Costos comunes ──
   /** Costo unitario por panel [$MX] */
   costoPorPanel?: number;
   /** Costo del inversor [$MX] */
@@ -92,8 +106,23 @@ export interface SFVInput {
   costoProtecciones?: number;
   /** Costo de instalación [$MX] */
   costoInstalacion?: number;
+  /** Costo del cableado [$MX] */
+  costoCableado?: number;
   /** Precio de la electricidad [$MX/kWh] — requerido cuando metodoPerfil=cargas */
   precioKwh?: number;
+  // ── Costos bombeo ──
+  /** Costo de la bomba [$MX] */
+  costoBomba?: number;
+  /** Costo del variador de frecuencia [$MX] */
+  costoVariador?: number;
+  /** Tipo de energía convencional comparada */
+  tipoCombustible?: TipoCombustible;
+  /** Precio de electricidad convencional [$/kWh] */
+  precioKwhConvencional?: number;
+  /** Consumo anual de diésel [L] */
+  consumoDieselAnual?: number;
+  /** Precio del diésel [$/L] */
+  precioDieselLitro?: number;
 }
 
 export interface ResultadoPaneles {
@@ -135,6 +164,19 @@ export interface ResultadoProtecciones {
   termomagneticoCorriente?: number;
 }
 
+export interface ResultadoBomba {
+  potenciaHP: number;
+  potenciaKw: number;
+  potenciaHidraulicaW: number;
+  caudalM3s: number;
+}
+
+export interface ResultadoVariador {
+  vocTotal: number;
+  tipo: string;
+  corrienteMaxima: number;
+}
+
 export interface ResultadoAmbiental {
   energiaAnualKwh: number;
   ahorroCo2PrimerAnio: number;
@@ -145,12 +187,19 @@ export interface ResultadoAmbiental {
 
 export interface ResultadoEconomico {
   costoTotal: number;
-  precioKwh: number;
+  precioKwh?: number;
   ahorroPrimerAnio: number;
   ahorroTotal: number;
+  /** Año (entero) de recuperación de inversión, o null si no se recupera */
   payback: number | null;
   vectorAhorros: number[];
   ahorrosAcumulados: number[];
+  /** Flujo de caja acumulado incluyendo año 0 (inversión negativa) */
+  flujoCaja: number[];
+  /** Solo bombeo: costo anual del sistema convencional */
+  costoConvencional?: number;
+  /** Solo bombeo: costo anual de mantenimiento solar (2%) */
+  costoMantenimiento?: number;
 }
 
 export interface SFVResultado {
@@ -162,6 +211,8 @@ export interface SFVResultado {
   regulador?: ResultadoRegulador;
   cableado: ResultadoCableado;
   protecciones?: ResultadoProtecciones;
+  bomba?: ResultadoBomba;
+  variador?: ResultadoVariador;
   ambiental: ResultadoAmbiental;
   economico?: ResultadoEconomico;
 }

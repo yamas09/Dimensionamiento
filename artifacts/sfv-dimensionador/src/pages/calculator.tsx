@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
-import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign } from "lucide-react";
+import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets } from "lucide-react";
 import { SolarPanelIcon } from "@/components/icons";
 import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
@@ -41,24 +41,48 @@ const sfvSchema = z.object({
   bateriaSeleccionMetodo: z.enum(["catalogo", "manual"]).optional(),
   bateriaAh: z.coerce.number().optional(),
   bateriaV: z.coerce.number().optional(),
-  // Módulo económico
+  // Bombeo
+  volumenLitros: z.coerce.number().min(1).optional(),
+  alturaDebajo: z.coerce.number().min(0).optional(),
+  alturaEncima: z.coerce.number().min(0).optional(),
+  usarHspParaBombeo: z.boolean().optional(),
+  horasBombeoManual: z.coerce.number().min(0.1).max(24).optional(),
+  // Módulo económico común
   costoPorPanel:    z.coerce.number().min(0).optional(),
   costoInversor:    z.coerce.number().min(0).optional(),
   costoBaterias:    z.coerce.number().min(0).optional(),
   costoRegulador:   z.coerce.number().min(0).optional(),
   costoProtecciones: z.coerce.number().min(0).optional(),
   costoInstalacion: z.coerce.number().min(0).optional(),
+  costoCableado:    z.coerce.number().min(0).optional(),
   precioKwh:        z.coerce.number().min(0).optional(),
+  // Módulo económico bombeo
+  costoBomba:         z.coerce.number().min(0).optional(),
+  costoVariador:      z.coerce.number().min(0).optional(),
+  tipoCombustible:    z.enum(["electrico", "diesel"]).optional(),
+  precioKwhConvencional: z.coerce.number().min(0).optional(),
+  consumoDieselAnual: z.coerce.number().min(0).optional(),
+  precioDieselLitro:  z.coerce.number().min(0).optional(),
 }).superRefine((data, ctx) => {
-  if (data.metodoPerfil === "cargas" && (!data.cargas || data.cargas.length === 0)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Agrega al menos una carga", path: ["cargas"] });
-  }
-  if (data.metodoPerfil === "recibo") {
-    if (!data.registrosRecibo || data.registrosRecibo.length === 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Agrega al menos un registro", path: ["registrosRecibo"] });
+  if (data.tipoSistema !== "bombeo") {
+    if (data.metodoPerfil === "cargas" && (!data.cargas || data.cargas.length === 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Agrega al menos una carga", path: ["cargas"] });
     }
-    if (!data.diasPeriodoRecibo) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["diasPeriodoRecibo"] });
+    if (data.metodoPerfil === "recibo") {
+      if (!data.registrosRecibo || data.registrosRecibo.length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Agrega al menos un registro", path: ["registrosRecibo"] });
+      }
+      if (!data.diasPeriodoRecibo) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["diasPeriodoRecibo"] });
+      }
+    }
+  }
+  if (data.tipoSistema === "bombeo") {
+    if (!data.volumenLitros) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["volumenLitros"] });
+    if (!data.alturaDebajo && data.alturaDebajo !== 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["alturaDebajo"] });
+    if (!data.alturaEncima && data.alturaEncima !== 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["alturaEncima"] });
+    if (!data.usarHspParaBombeo && !data.horasBombeoManual) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ingresa las horas de bombeo", path: ["horasBombeoManual"] });
     }
   }
   if (data.tipoSistema === "aislado") {
@@ -74,7 +98,7 @@ const sfvSchema = z.object({
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// id 3 = Ficha técnica, id 4 = Baterías (aislado), id 5 = Rentabilidad (no bombeo)
+// id 3 = Ficha técnica, id 4 = Baterías (aislado), id 5 = Rentabilidad (todos los sistemas)
 const STEPS = [
   { id: 1, title: "Ubicación",     icon: MapPin },
   { id: 2, title: "Perfil",        icon: Zap },
@@ -114,13 +138,27 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
       bateriaSeleccionMetodo: "catalogo",
       bateriaAh: undefined,
       bateriaV: undefined,
+      // Bombeo
+      volumenLitros: undefined,
+      alturaDebajo: undefined,
+      alturaEncima: undefined,
+      usarHspParaBombeo: true,
+      horasBombeoManual: undefined,
+      // Costos
       costoPorPanel: undefined,
       costoInversor: undefined,
       costoBaterias: undefined,
       costoRegulador: undefined,
       costoProtecciones: undefined,
       costoInstalacion: undefined,
+      costoCableado: undefined,
       precioKwh: undefined,
+      costoBomba: undefined,
+      costoVariador: undefined,
+      tipoCombustible: "electrico" as const,
+      precioKwhConvencional: undefined,
+      consumoDieselAnual: undefined,
+      precioDieselLitro: undefined,
     },
     mode: "onChange"
   });
@@ -133,19 +171,15 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
 
   // Paso 4 (Baterías) solo aparece para sistemas aislados
-  // Paso 5 (Económico) aparece para aislado e interconectado (no bombeo)
+  // Paso 5 (Rentabilidad) aparece para TODOS los sistemas
   const visibleSteps = STEPS.filter(s => {
     if (s.id === 4 && tipoSistema !== "aislado") return false;
-    if (s.id === 5 && tipoSistema === "bombeo") return false;
     return true;
   });
 
   // Si el usuario cambia el tipo de sistema, regresar a un paso visible
   useEffect(() => {
     if (tipoSistema !== "aislado" && activeStep === 4) {
-      setActiveStep(3);
-    }
-    if (tipoSistema === "bombeo" && activeStep === 5) {
       setActiveStep(3);
     }
   }, [tipoSistema]);
@@ -155,16 +189,25 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
     if (activeStep === 1) fieldsToValidate = ["latitud", "longitud", "hsp"];
-    if (activeStep === 2) fieldsToValidate = ["tipoSistema", "metodoPerfil", "cargas", "registrosRecibo", "diasPeriodoRecibo"];
+    if (activeStep === 2) {
+      if (tipoSistema === "bombeo") {
+        fieldsToValidate = ["volumenLitros", "alturaDebajo", "alturaEncima"];
+        if (!watch("usarHspParaBombeo")) fieldsToValidate.push("horasBombeoManual");
+      } else {
+        fieldsToValidate = ["tipoSistema", "metodoPerfil", "cargas", "registrosRecibo", "diasPeriodoRecibo"];
+      }
+    }
     // Paso 3 = Panel: valida ficha técnica antes de continuar
     if (activeStep === 3) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
     // Paso 4 = Baterías (solo para aislado): valida los campos de batería antes de calcular
     if (activeStep === 4) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
     // Paso 5 = Rentabilidad: valida costos solo si no se omite
     if (activeStep === 5 && !omitirEconomico) {
-      const econFields: string[] = ["costoPorPanel", "costoInversor", "costoRegulador", "costoProtecciones", "costoInstalacion"];
-      if (tipoSistema === "aislado") econFields.push("costoBaterias");
-      if (metodoPerfil === "cargas") econFields.push("precioKwh");
+      const econFields: string[] = ["costoPorPanel", "costoInstalacion"];
+      if (tipoSistema === "aislado") { econFields.push("costoInversor", "costoRegulador", "costoProtecciones", "costoBaterias"); }
+      if (tipoSistema === "interconectado") { econFields.push("costoInversor", "costoRegulador", "costoProtecciones"); }
+      if (tipoSistema === "bombeo") { econFields.push("costoBomba", "costoVariador"); }
+      if (tipoSistema !== "bombeo" && metodoPerfil === "cargas") econFields.push("precioKwh");
       fieldsToValidate = econFields;
     }
     
@@ -188,14 +231,12 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   };
 
   const handleOmitir = () => {
-    // Limpia los campos económicos y omite el análisis de rentabilidad
-    setValue("costoPorPanel", undefined as any);
-    setValue("costoInversor", undefined as any);
-    setValue("costoBaterias", undefined as any);
-    setValue("costoRegulador", undefined as any);
-    setValue("costoProtecciones", undefined as any);
-    setValue("costoInstalacion", undefined as any);
-    setValue("precioKwh", undefined as any);
+    const camposEconomicos = [
+      "costoPorPanel", "costoInversor", "costoBaterias", "costoRegulador",
+      "costoProtecciones", "costoInstalacion", "costoCableado", "precioKwh",
+      "costoBomba", "costoVariador", "precioKwhConvencional", "consumoDieselAnual", "precioDieselLitro"
+    ] as const;
+    camposEconomicos.forEach(f => setValue(f as any, undefined as any));
     setOmitirEconomico(true);
     handleSubmit(onSubmit)();
   };
@@ -332,55 +373,71 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                   {activeStep === 2 && (
                     <div className="space-y-6">
                       <div className="border-b border-border pb-4 mb-6">
-                        <h2 className="text-2xl font-bold flex items-center gap-2"><Zap className="w-6 h-6 text-primary" /> Perfil de Consumo</h2>
-                        <p className="text-muted-foreground mt-1">Defina cómo evaluaremos la demanda energética.</p>
+                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                          {tipoSistema === "bombeo"
+                            ? <><Droplets className="w-6 h-6 text-primary" /> Parámetros de Bombeo</>
+                            : <><Zap className="w-6 h-6 text-primary" /> Perfil de Consumo</>
+                          }
+                        </h2>
+                        <p className="text-muted-foreground mt-1">
+                          {tipoSistema === "bombeo"
+                            ? "Ingrese los datos hidráulicos del sistema de bombeo."
+                            : "Defina cómo evaluaremos la demanda energética."
+                          }
+                        </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <FormField label="Tipo de Sistema">
-                          <Controller
-                            control={control}
-                            name="tipoSistema"
-                            render={({ field }) => (
-                              <div className="flex bg-muted p-1 rounded-xl">
-                                {["aislado", "interconectado", "bombeo"].map(t => (
-                                  <button
-                                    key={t} type="button"
-                                    onClick={() => field.onChange(t)}
-                                    className={cn("flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
-                                  >
-                                    {t}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          />
-                        </FormField>
-                        <FormField label="Método de Perfil">
-                          <Controller
-                            control={control}
-                            name="metodoPerfil"
-                            render={({ field }) => (
-                              <div className="flex bg-muted p-1 rounded-xl">
-                                {["cargas", "recibo"].map(t => (
-                                  <button
-                                    key={t} type="button"
-                                    onClick={() => field.onChange(t)}
-                                    className={cn("flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
-                                  >
-                                    {t}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          />
-                        </FormField>
-                      </div>
+                      {/* Selector de tipo de sistema (siempre visible) */}
+                      <FormField label="Tipo de Sistema">
+                        <Controller
+                          control={control}
+                          name="tipoSistema"
+                          render={({ field }) => (
+                            <div className="flex bg-muted p-1 rounded-xl max-w-sm">
+                              {["aislado", "interconectado", "bombeo"].map(t => (
+                                <button
+                                  key={t} type="button"
+                                  onClick={() => field.onChange(t)}
+                                  className={cn("flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
+                                >
+                                  {t}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        />
+                      </FormField>
 
-                      {metodoPerfil === "cargas" ? (
-                        <CargasTable control={control} register={methods.register} errors={errors} />
+                      {/* Bombeo: parámetros hidráulicos */}
+                      {tipoSistema === "bombeo" ? (
+                        <BombeoParamsStep register={methods.register} control={control} errors={errors} watch={watch} setValue={setValue} />
                       ) : (
-                        <RecibosTable control={control} register={methods.register} errors={errors} />
+                        <>
+                          <FormField label="Método de Perfil">
+                            <Controller
+                              control={control}
+                              name="metodoPerfil"
+                              render={({ field }) => (
+                                <div className="flex bg-muted p-1 rounded-xl max-w-xs">
+                                  {["cargas", "recibo"].map(t => (
+                                    <button
+                                      key={t} type="button"
+                                      onClick={() => field.onChange(t)}
+                                      className={cn("flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
+                                    >
+                                      {t}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            />
+                          </FormField>
+                          {metodoPerfil === "cargas" ? (
+                            <CargasTable control={control} register={methods.register} errors={errors} />
+                          ) : (
+                            <RecibosTable control={control} register={methods.register} errors={errors} />
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -432,10 +489,13 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                   {activeStep === 5 && (
                     <EconomicoStep
                       register={methods.register}
+                      control={control}
                       errors={errors}
                       tipoSistema={tipoSistema}
                       metodoPerfil={metodoPerfil}
                       registrosRecibo={watch("registrosRecibo") || []}
+                      watch={watch}
+                      setValue={setValue}
                     />
                   )}
 
@@ -862,8 +922,73 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
   );
 }
 
+// ================= Bombeo Params Step Component =================
+function BombeoParamsStep({ register, control, errors, watch, setValue }: any) {
+  const usarHsp = watch("usarHspParaBombeo");
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <FormField label="Volumen a bombear por día [L]" error={errors.volumenLitros?.message}>
+          <input type="number" step="any" min="1" {...register("volumenLitros")} className="input-field" placeholder="Ej. 5000" />
+        </FormField>
+        <FormField label="Profundidad: nivel agua → suelo [m]" error={errors.alturaDebajo?.message}>
+          <input type="number" step="any" min="0" {...register("alturaDebajo")} className="input-field" placeholder="Ej. 15" />
+        </FormField>
+        <FormField label="Altura: suelo → tanque de almacenamiento [m]" error={errors.alturaEncima?.message}>
+          <input type="number" step="any" min="0" {...register("alturaEncima")} className="input-field" placeholder="Ej. 5" />
+        </FormField>
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold text-foreground mb-3">Horas de bombeo diarias</p>
+        <div className="flex gap-3 mb-4">
+          <button
+            type="button"
+            onClick={() => setValue("usarHspParaBombeo", true)}
+            className={cn(
+              "flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all text-center",
+              usarHsp ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+            )}
+          >
+            Usar HSP del sitio
+          </button>
+          <button
+            type="button"
+            onClick={() => setValue("usarHspParaBombeo", false)}
+            className={cn(
+              "flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all text-center",
+              !usarHsp ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+            )}
+          >
+            Ingresar manualmente
+          </button>
+        </div>
+        {!usarHsp && (
+          <div className="max-w-xs">
+            <FormField label="Horas de bombeo diarias [h]" error={errors.horasBombeoManual?.message}>
+              <input type="number" step="any" min="0.1" max="24" {...register("horasBombeoManual")} className="input-field" placeholder="Ej. 6" />
+            </FormField>
+          </div>
+        )}
+        {usarHsp && (
+          <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 max-w-md">
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-blue-700">Las horas de bombeo serán iguales a las Horas Solar Pico (HSP) del sitio ingresadas en el paso 1.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+        <p className="text-sm text-amber-700">La altura total se ajustará automáticamente con un factor de pérdidas del 12.5% para compensar la fricción en la tubería.</p>
+      </div>
+    </div>
+  );
+}
+
 // ================= Económico Step Component =================
-function EconomicoStep({ register, errors, tipoSistema, metodoPerfil, registrosRecibo }: any) {
+function EconomicoStep({ register, control, errors, tipoSistema, metodoPerfil, registrosRecibo, watch, setValue }: any) {
   // Calcular precio promedio desde recibos (solo para mostrar al usuario)
   const precioKwhCalculado = (() => {
     if (metodoPerfil !== "recibo" || !registrosRecibo.length) return null;
@@ -871,6 +996,8 @@ function EconomicoStep({ register, errors, tipoSistema, metodoPerfil, registrosR
     const totalPrecio  = registrosRecibo.reduce((s: number, r: any) => s + (r.precio  || 0), 0);
     return totalConsumo > 0 ? (totalPrecio / totalConsumo).toFixed(4) : null;
   })();
+
+  const tipoCombustible = watch("tipoCombustible");
 
   const MoneyInput = ({ name, label, error, placeholder = "0.00" }: { name: string; label: string; error?: string; placeholder?: string }) => (
     <FormField label={label} error={error}>
@@ -899,42 +1026,95 @@ function EconomicoStep({ register, errors, tipoSistema, metodoPerfil, registrosR
         </p>
       </div>
 
-      {/* Costos del sistema */}
-      <div>
-        <h3 className="text-base font-semibold text-foreground mb-4">Costos del Sistema [$MX]</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <MoneyInput name="costoPorPanel"     label="Costo por panel"             error={errors.costoPorPanel?.message} />
-          <MoneyInput name="costoInversor"     label="Costo del inversor"          error={errors.costoInversor?.message} />
-          {tipoSistema === "aislado" && (
-            <MoneyInput name="costoBaterias"   label="Costo banco de baterías"     error={errors.costoBaterias?.message} />
-          )}
-          <MoneyInput name="costoRegulador"    label="Costo del regulador"         error={errors.costoRegulador?.message} />
-          <MoneyInput name="costoProtecciones" label="Costo de protecciones"       error={errors.costoProtecciones?.message} />
-          <MoneyInput name="costoInstalacion"  label="Costo de instalación"        error={errors.costoInstalacion?.message} />
-        </div>
-      </div>
-
-      {/* Precio de electricidad */}
-      <div>
-        <h3 className="text-base font-semibold text-foreground mb-4">Precio de la Electricidad</h3>
-        {metodoPerfil === "recibo" ? (
-          <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 max-w-md">
-            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-blue-700">Precio derivado de tus recibos</p>
-              {precioKwhCalculado ? (
-                <p className="text-lg font-bold text-blue-800 mt-1">${precioKwhCalculado} <span className="text-sm font-normal">MX/kWh</span></p>
-              ) : (
-                <p className="text-sm text-blue-600 mt-1">Se calculará a partir del historial de recibos ingresado.</p>
-              )}
+      {tipoSistema === "bombeo" ? (
+        /* ── Costos sistema bombeo ── */
+        <>
+          <div>
+            <h3 className="text-base font-semibold text-foreground mb-4">Costos del Sistema [$MX]</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <MoneyInput name="costoPorPanel"  label="Costo por panel"                  error={errors.costoPorPanel?.message} />
+              <MoneyInput name="costoBomba"     label="Costo de la bomba"                error={errors.costoBomba?.message} />
+              <MoneyInput name="costoVariador"  label="Costo del variador de frecuencia" error={errors.costoVariador?.message} />
+              <MoneyInput name="costoCableado"  label="Costo del cableado"               error={errors.costoCableado?.message} />
+              <MoneyInput name="costoInstalacion" label="Costo de instalación"           error={errors.costoInstalacion?.message} />
             </div>
           </div>
-        ) : (
-          <div className="max-w-xs">
-            <MoneyInput name="precioKwh" label="Precio de electricidad [$/kWh]" error={errors.precioKwh?.message} placeholder="Ej. 3.50" />
+
+          <div>
+            <h3 className="text-base font-semibold text-foreground mb-4">Fuente de energía actual (para comparativa)</h3>
+            <div className="flex gap-3 mb-5">
+              {[
+                { value: "electrico", label: "Red eléctrica" },
+                { value: "diesel",   label: "Diésel" },
+              ].map(opt => (
+                <button
+                  key={opt.value} type="button"
+                  onClick={() => setValue("tipoCombustible", opt.value)}
+                  className={cn(
+                    "flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all text-center",
+                    tipoCombustible === opt.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {tipoCombustible === "electrico" ? (
+              <div className="max-w-xs">
+                <MoneyInput name="precioKwhConvencional" label="Precio electricidad convencional [$/kWh]" error={errors.precioKwhConvencional?.message} placeholder="Ej. 3.50" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-lg">
+                <FormField label="Consumo anual de diésel [L]" error={errors.consumoDieselAnual?.message}>
+                  <input type="number" step="any" min="0" {...register("consumoDieselAnual")} className="input-field" placeholder="Ej. 2000" />
+                </FormField>
+                <MoneyInput name="precioDieselLitro" label="Precio del diésel [$/L]" error={errors.precioDieselLitro?.message} placeholder="Ej. 24.50" />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        /* ── Costos sistemas aislado / interconectado ── */
+        <>
+          <div>
+            <h3 className="text-base font-semibold text-foreground mb-4">Costos del Sistema [$MX]</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <MoneyInput name="costoPorPanel"     label="Costo por panel"             error={errors.costoPorPanel?.message} />
+              <MoneyInput name="costoInversor"     label="Costo del inversor"          error={errors.costoInversor?.message} />
+              {tipoSistema === "aislado" && (
+                <MoneyInput name="costoBaterias"   label="Costo banco de baterías"     error={errors.costoBaterias?.message} />
+              )}
+              <MoneyInput name="costoRegulador"    label="Costo del regulador"         error={errors.costoRegulador?.message} />
+              <MoneyInput name="costoProtecciones" label="Costo de protecciones"       error={errors.costoProtecciones?.message} />
+              <MoneyInput name="costoCableado"     label="Costo del cableado"          error={errors.costoCableado?.message} />
+              <MoneyInput name="costoInstalacion"  label="Costo de instalación"        error={errors.costoInstalacion?.message} />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-base font-semibold text-foreground mb-4">Precio de la Electricidad</h3>
+            {metodoPerfil === "recibo" ? (
+              <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 max-w-md">
+                <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-700">Precio derivado de tus recibos</p>
+                  {precioKwhCalculado ? (
+                    <p className="text-lg font-bold text-blue-800 mt-1">${precioKwhCalculado} <span className="text-sm font-normal">MX/kWh</span></p>
+                  ) : (
+                    <p className="text-sm text-blue-600 mt-1">Se calculará a partir del historial de recibos ingresado.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-xs">
+                <MoneyInput name="precioKwh" label="Precio de electricidad [$/kWh]" error={errors.precioKwh?.message} placeholder="Ej. 3.50" />
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

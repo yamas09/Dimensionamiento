@@ -1,6 +1,6 @@
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine } from "recharts";
 import { SFVResultado } from "@workspace/api-client-react";
-import { Leaf, Sun, Zap, Battery, ShieldAlert, Cpu, Activity, Info, DollarSign, TrendingUp, PiggyBank, Clock, RotateCcw } from "lucide-react";
+import { Leaf, Sun, Zap, Battery, Cpu, Activity, Info, DollarSign, TrendingUp, PiggyBank, Clock, RotateCcw, Droplets, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ResultsViewProps {
@@ -14,6 +14,8 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
     co2: Number(co2.toFixed(2)),
     degradation: Number(data.ambiental.vectorDegradacion[index].toFixed(2)),
   }));
+
+  const isBombeo = !!data.bomba;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-forwards">
@@ -51,14 +53,14 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </div>
           <div className="grid grid-cols-2 gap-4 relative z-10">
             <DataPoint label="Total Paneles"       value={data.paneles.totalPaneles} />
-            <DataPoint label="Voltaje de Sistema"  value={`${data.paneles.voltajeSistema.toFixed(2)} V`} />
+            <DataPoint label="Voltaje de Sistema"  value={`${data.paneles.voltajeSistema} V`} />
             <DataPoint label="Serie"               value={data.paneles.panelesSerie} />
             <DataPoint label="Paralelo"            value={data.paneles.panelesParalelo} />
             <DataPoint label="Corriente"           value={`${data.paneles.corrienteSistema.toFixed(2)} A`} />
           </div>
         </div>
 
-        {/* Banco de Baterías */}
+        {/* Banco de Baterías (aislado) */}
         {data.baterias && (
           <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -72,12 +74,60 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
             </div>
             <div className="grid grid-cols-2 gap-4 relative z-10">
               <DataPoint label="Total Baterías"      value={data.baterias.totalBaterias} />
-              <DataPoint label="Capacidad (Nominal)" value={`${data.baterias.capacidadNominal.toFixed(2)} Ah`} />
+              <DataPoint label="Capacidad (Nominal)" value={`${data.baterias.capacidadNominal.toFixed(0)} Ah`} />
               <DataPoint label="Serie"               value={data.baterias.bateriasSerie} />
               <DataPoint label="Paralelo"            value={data.baterias.bateriasParalelo} />
               <DataPoint label="Voltaje"             value={`${data.baterias.voltajeBateria} V`} />
               <DataPoint label="Prof. Descarga"      value={`${(data.baterias.dod * 100).toFixed(0)}%`} />
             </div>
+          </div>
+        )}
+
+        {/* Bomba + Variador (bombeo) */}
+        {data.bomba && (
+          <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Droplets className="w-32 h-32" />
+            </div>
+            <div className="flex items-center gap-3 mb-6 relative z-10">
+              <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600">
+                <Droplets className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold">Sistema de Bombeo</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4 relative z-10">
+              <DataPoint label="Potencia Eléctrica" value={`${data.bomba.potenciaKw.toFixed(3)} kW`} />
+              <DataPoint label="Potencia (HP)"      value={`${data.bomba.potenciaHP.toFixed(3)} HP`} />
+              <DataPoint label="Pot. Hidráulica"    value={`${data.bomba.potenciaHidraulicaW.toFixed(0)} W`} />
+              <DataPoint label="Caudal"             value={`${(data.bomba.caudalM3s * 1000).toFixed(4)} L/s`} />
+            </div>
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+              <strong>Nota:</strong> Seleccione la bomba comercial con la potencia inmediata superior a {data.bomba.potenciaHP.toFixed(3)} HP.
+            </div>
+          </div>
+        )}
+
+        {data.variador && (
+          <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Settings className="w-32 h-32" />
+            </div>
+            <div className="flex items-center gap-3 mb-6 relative z-10">
+              <div className="p-3 bg-purple-500/10 rounded-xl text-purple-600">
+                <Settings className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold">Variador de Frecuencia</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4 relative z-10">
+              <DataPoint label="Tipo recomendado"   value={data.variador.tipo} />
+              <DataPoint label="Voc Total (arreglo)" value={`${data.variador.vocTotal.toFixed(2)} V`} />
+              <DataPoint label="Corriente máxima"   value={`${data.variador.corrienteMaxima.toFixed(2)} A`} />
+            </div>
+            {data.variador.tipo === "No compatible" && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                ⚠️ La configuración de paneles no cumple con ningún rango de variador (230 V o 400 V). Revisa el arreglo.
+              </div>
+            )}
           </div>
         )}
 
@@ -125,15 +175,15 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <MetricCard
-          title="Energía Diaria"
-          value={data.energiaDiariaKwh.toFixed(2)}
+          title={isBombeo ? "Energía Necesaria (Bombeo)" : "Energía Diaria"}
+          value={data.energiaDiariaKwh.toFixed(3)}
           unit="kWh/día"
           icon={<Zap className="w-5 h-5 text-amber-500" />}
           colorClass="bg-amber-50"
         />
         <MetricCard
-          title="Potencia Demandada"
-          value={data.potenciaDemandaKw.toFixed(2)}
+          title={isBombeo ? "Potencia Bomba" : "Potencia Demandada"}
+          value={data.potenciaDemandaKw.toFixed(3)}
           unit="kW"
           icon={<Activity className="w-5 h-5 text-blue-500" />}
           colorClass="bg-blue-50"
@@ -143,7 +193,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
       <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
           <Activity className="w-5 h-5 text-primary" />
-          Energía generada (vida útil)
+          Energía generada con degradación (25 años)
         </h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -196,7 +246,6 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Impacto ambiental banner */}
         <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-6 shadow-xl shadow-orange-500/20 text-white flex flex-col justify-center relative overflow-hidden">
           <Leaf className="absolute -bottom-4 -right-4 w-48 h-48 opacity-10" />
           <div className="relative z-10">
@@ -215,11 +264,10 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </div>
         </div>
 
-        {/* Gráfica CO2 */}
         <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <Leaf className="w-5 h-5 text-orange-500" />
-            Ahorro Acumulado de CO₂ (25 Años)
+            Ahorro Anual de CO₂ (25 Años)
           </h3>
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -242,11 +290,11 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#64748B' }}
-                  label={{ value: 'Ahorro [tCO₂e]', angle: -90, position: 'insideLeft', offset: -35, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                  label={{ value: 'CO₂ [kg]', angle: -90, position: 'insideLeft', offset: -35, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
                 />
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  formatter={(val: number) => [`${val} tCO₂e`, 'Ahorro Acumulado']}
+                  formatter={(val: number) => [`${val} kg CO₂`, 'Ahorro anual']}
                   labelFormatter={(val) => `Año ${val}`}
                 />
                 <Area type="monotone" dataKey="co2" stroke="#f97316" strokeWidth={3} fillOpacity={1} fill="url(#colorCo2)" />
@@ -260,14 +308,12 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
       {/* SECCIÓN 4 — ECONÓMICO (solo si existe)            */}
       {/* ═══════════════════════════════════════════════════ */}
       {data.economico && (() => {
-        const eco = data.economico;
-        const econData = eco.vectorAhorros.map((ahorro, i) => ({
-          year: i + 1,
-          ahorro,
-          acumulado: eco.ahorrosAcumulados[i],
-        }));
+        const eco = data.economico!;
         const fmt = (n: number) =>
           n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // Flujo de caja: 26 puntos, año 0..25
+        const flujoData = (eco.flujoCaja ?? []).map((val, i) => ({ year: i, flujo: val }));
 
         return (
           <>
@@ -283,15 +329,15 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
               />
               <MetricCard
                 title="Retorno (ROI)"
-                value={eco.payback !== null ? eco.payback.toFixed(1) : "—"}
-                unit={eco.payback !== null ? "años" : ""}
+                value={eco.payback !== null ? `Año ${eco.payback}` : "Sin retorno"}
+                unit={eco.payback !== null ? "de recuperación" : "en 25 años"}
                 icon={<Clock className="w-5 h-5 text-blue-500" />}
                 colorClass="bg-blue-50"
               />
               <MetricCard
-                title="Ahorro 1er Año"
+                title={isBombeo ? "Ahorro anual (vs convencional)" : "Ahorro 1er Año"}
                 value={`$${fmt(eco.ahorroPrimerAnio)}`}
-                unit="MXN"
+                unit="MXN/año"
                 icon={<TrendingUp className="w-5 h-5 text-orange-500" />}
                 colorClass="bg-orange-50"
               />
@@ -304,45 +350,86 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
               />
             </div>
 
-            <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                Ahorro Económico Acumulado (25 Años)
-              </h3>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={econData} margin={{ top: 5, right: 20, bottom: 30, left: 65 }}>
-                    <defs>
-                      <linearGradient id="colorAhorro" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis
-                      dataKey="year"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: '#64748B' }}
-                      label={{ value: 'Años', position: 'insideBottom', offset: -15, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: '#64748B' }}
-                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                      label={{ value: 'Ahorro [$MXN]', angle: -90, position: 'insideLeft', offset: -45, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
-                    />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      formatter={(val: number) => [`$${fmt(val)} MXN`, 'Ahorro Acumulado']}
-                      labelFormatter={(val) => `Año ${val}`}
-                    />
-                    <Area type="monotone" dataKey="acumulado" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorAhorro)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+            {/* Bombeo: costos comparativos */}
+            {isBombeo && eco.costoConvencional !== undefined && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <MetricCard
+                  title="Costo Anual Sistema Actual"
+                  value={`$${fmt(eco.costoConvencional)}`}
+                  unit="MXN/año"
+                  icon={<Zap className="w-5 h-5 text-red-500" />}
+                  colorClass="bg-red-50"
+                />
+                <MetricCard
+                  title="Mantenimiento Solar (2%/año)"
+                  value={`$${fmt(eco.costoMantenimiento ?? 0)}`}
+                  unit="MXN/año"
+                  icon={<Settings className="w-5 h-5 text-slate-500" />}
+                  colorClass="bg-slate-50"
+                />
               </div>
-            </div>
+            )}
+
+            {/* Gráfica flujo de caja acumulado */}
+            {flujoData.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
+                <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Flujo de Caja Acumulado (25 Años)
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Muestra la recuperación de la inversión año a año. La inversión se recupera cuando el flujo cruza cero.
+                </p>
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={flujoData} margin={{ top: 10, right: 20, bottom: 30, left: 70 }}>
+                      <defs>
+                        <linearGradient id="colorFlujoPos" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="colorFlujoNeg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis
+                        dataKey="year"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#64748B' }}
+                        label={{ value: 'Año', position: 'insideBottom', offset: -15, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: '#64748B' }}
+                        tickFormatter={(v) => v >= 0 ? `$${(v / 1000).toFixed(0)}k` : `-$${(Math.abs(v) / 1000).toFixed(0)}k`}
+                        label={{ value: 'Flujo [$MXN]', angle: -90, position: 'insideLeft', offset: -50, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
+                      />
+                      <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" strokeWidth={2} label={{ value: "Punto de equilibrio", position: "right", fontSize: 11, fill: "#8b5cf6" }} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        formatter={(val: number) => [
+                          `$${fmt(val)} MXN`,
+                          val >= 0 ? 'Ganancia acumulada' : 'Inversión pendiente'
+                        ]}
+                        labelFormatter={(val) => `Año ${val}`}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="flujo"
+                        stroke="#8b5cf6"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorFlujoPos)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
           </>
         );
       })()}
@@ -376,7 +463,7 @@ function MetricCard({ title, value, unit, icon, colorClass }: { title: string; v
       <div>
         <p className="text-sm font-semibold text-muted-foreground">{title}</p>
         <div className="mt-1 flex items-baseline gap-1 flex-wrap">
-          <span className="text-2xl font-bold tracking-tight text-foreground">{value}</span>
+          <span className="text-xl font-bold tracking-tight text-foreground">{value}</span>
           {unit && <span className="text-sm font-medium text-muted-foreground mb-1">{unit}</span>}
         </div>
       </div>
