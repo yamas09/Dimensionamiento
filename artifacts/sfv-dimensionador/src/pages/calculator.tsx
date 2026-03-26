@@ -528,8 +528,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                 )}
 
                 {!isLastStep ? (
-                  <button type="button" onClick={nextStep} className="btn-primary">
-                    Siguiente <ArrowRight className="w-4 h-4 ml-2" />
+                  <button type="button" onClick={nextStep} className="btn-next">
+                    Siguiente <ArrowRight className="w-4 h-4 ml-2 arrow-icon" />
                   </button>
                 ) : (
                   <button 
