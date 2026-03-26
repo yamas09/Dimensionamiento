@@ -122,7 +122,7 @@ export const CalcularSFVResponse = zod.object({
   }),
   protecciones: zod
     .object({
-      corrienteFusible: zod.number(),
+      corrienteFusible: zod.number().optional(),
       breakerCC: zod.number().optional(),
       seccionadorVoltaje: zod.number().optional(),
       seccionadorCorriente: zod.number().optional(),
@@ -140,8 +140,8 @@ export const CalcularSFVResponse = zod.object({
     .optional(),
   variador: zod
     .object({
-      vocTotal: zod.number(),
-      tipo: zod.string(),
+      vocTotal: zod.number().optional(),
+      tipo: zod.string().optional(),
       corrienteMaxima: zod.number(),
     })
     .optional(),

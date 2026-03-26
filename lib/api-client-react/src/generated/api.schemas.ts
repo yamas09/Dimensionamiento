@@ -156,7 +156,7 @@ export interface ResultadoCableado {
 }
 
 export interface ResultadoProtecciones {
-  corrienteFusible: number;
+  corrienteFusible?: number;
   breakerCC?: number;
   seccionadorVoltaje?: number;
   seccionadorCorriente?: number;
@@ -172,8 +172,8 @@ export interface ResultadoBomba {
 }
 
 export interface ResultadoVariador {
-  vocTotal: number;
-  tipo: string;
+  vocTotal?: number;
+  tipo?: string;
   corrienteMaxima: number;
 }
 

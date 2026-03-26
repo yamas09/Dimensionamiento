@@ -621,8 +621,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
               </button>
               
               <div className="flex items-center gap-3">
-                {/* Botón Omitir: solo visible en el paso de Rentabilidad */}
-                {isLastStep && activeStep === 5 && (
+                {/* Botón Omitir: visible en el paso de Rentabilidad para todos los sistemas */}
+                {isLastStep && (
                   <button
                     type="button"
                     onClick={handleOmitir}

@@ -322,10 +322,13 @@ router.post("/calcular", (req, res) => {
     );
     const corrienteSistema = parseFloat((data.panelImp * panelesParalelo).toFixed(2));
 
-    // Variador
-    const { vocTotal, tipo: tipoVariador } = seleccionarVariador(data.panelVoc, panelesSerie);
+    // Variador (solo corriente máxima, sin seleccionar tipo)
     const potenciaPostPaneles = panelesTotal * data.panelPotencia;
     const corrienteMaximaVariador = parseFloat((potenciaPostPaneles / voltajeSistema).toFixed(2));
+
+    // Protecciones bombeo
+    const seccionadorBombeo = calcularInterruptorSeccionador(data.panelVoc, data.panelIsc);
+    const sobretensionBombeo = calcularSobretensiones(data.panelVoc);
 
     // Cableado
     const corrienteCable = calcularCableado(data.panelIsc);
@@ -403,7 +406,12 @@ router.post("/calcular", (req, res) => {
         potenciaHidraulicaW: parseFloat(potenciaHidraulicaW.toFixed(2)),
         caudalM3s: parseFloat(caudalM3s.toFixed(6)),
       },
-      variador: { vocTotal, tipo: tipoVariador, corrienteMaxima: corrienteMaximaVariador },
+      variador: { corrienteMaxima: corrienteMaximaVariador },
+      protecciones: {
+        seccionadorCorriente: seccionadorBombeo.corriente,
+        seccionadorVoltaje: seccionadorBombeo.voltaje,
+        sobretensionesVoltaje: sobretensionBombeo,
+      },
       ambiental: {
         energiaAnualKwh: parseFloat(energiaAnualKwh.toFixed(2)),
         ahorroCo2PrimerAnio,

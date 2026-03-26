@@ -119,9 +119,13 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
               <h3 className="text-xl font-bold">Variador de Frecuencia</h3>
             </div>
             <div className="grid grid-cols-2 gap-4 relative z-10">
-              <DataPoint label="Tipo recomendado"   value={data.variador.tipo} />
-              <DataPoint label="Voc Total (arreglo)" value={`${data.variador.vocTotal.toFixed(2)} V`} />
-              <DataPoint label="Corriente máxima"   value={`${data.variador.corrienteMaxima.toFixed(2)} A`} />
+              {data.variador.tipo && (
+                <DataPoint label="Tipo recomendado" value={data.variador.tipo} />
+              )}
+              {data.variador.vocTotal !== undefined && (
+                <DataPoint label="Voc Total (arreglo)" value={`${data.variador.vocTotal.toFixed(2)} V`} />
+              )}
+              <DataPoint label="Corriente máxima" value={`${data.variador.corrienteMaxima.toFixed(2)} A`} />
             </div>
             {data.variador.tipo === "No compatible" && (
               <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
