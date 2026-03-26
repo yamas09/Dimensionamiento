@@ -327,7 +327,9 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
               />
               <MetricCard
                 title="Retorno (ROI)"
-                value={eco.payback !== null ? `Año ${eco.payback}` : "Sin retorno"}
+                value={eco.payback !== null
+                  ? Number.isInteger(eco.payback) ? `Año ${eco.payback}` : `${Number(eco.payback).toFixed(1)} años`
+                  : "Sin retorno"}
                 unit={eco.payback !== null ? "de recuperación" : "en 25 años"}
                 icon={<Clock className="w-5 h-5 text-blue-500" />}
                 colorClass="bg-blue-50"

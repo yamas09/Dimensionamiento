@@ -361,7 +361,10 @@ router.post("/calcular", (req, res) => {
 
       const ahorroAnualBombeo = parseFloat((costoConvencional - costoMant).toFixed(2));
       const flujo = flujoCajaBombeo(costoTotal, ahorroAnualBombeo);
-      const paybackReal = calcularPaybackReal(flujo);
+      // Bombeo: payback simple = costo_total / ahorro_anual (Python: payback())
+      const paybackReal = ahorroAnualBombeo > 0
+        ? parseFloat((costoTotal / ahorroAnualBombeo).toFixed(2))
+        : null;
 
       // Construir vectores anuales para la gráfica (años 1..25 del flujo)
       const vectorAhorros = Array.from({ length: 25 }, (_, i) =>
