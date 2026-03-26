@@ -41,6 +41,12 @@ function App() {
               <Route path="/">{() => <CalculatorPage result={result} setResult={setResult} />}</Route>
               <Route component={NotFound} />
             </Switch>
+
+            <footer className="mt-8 pb-6 text-center">
+              <p className="text-xs text-muted-foreground/50 tracking-wide">
+                Desarrollado en Universidad Autónoma Metropolitana &mdash; Unidad Azcapotzalco por estudiantes de Ing. Eléctrica
+              </p>
+            </footer>
           </div>
         </WouterRouter>
         <Toaster />
