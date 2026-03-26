@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
 import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets } from "lucide-react";
 import { SolarPanelIcon } from "@/components/icons";
-import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO } from "@/lib/constants";
+import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO, CATALOGO_PANELES } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,7 @@ const sfvSchema = z.object({
   panelVmp: z.coerce.number().min(1),
   panelIsc: z.coerce.number().min(0.1),
   panelVoc: z.coerce.number().min(1),
+  panelSeleccionMetodo: z.enum(["catalogo", "manual"]).optional(),
   tipoBateria: z.enum(["Plomo", "Litio"]).optional(),
   diasAutonomia: z.coerce.number().optional(),
   bateriaSeleccionMetodo: z.enum(["catalogo", "manual"]).optional(),
@@ -135,7 +136,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
       panelVoc: 49.8,
       tipoBateria: "Plomo",
       diasAutonomia: 2,
-      bateriaSeleccionMetodo: "catalogo",
+      panelSeleccionMetodo: "catalogo" as const,
+      bateriaSeleccionMetodo: "catalogo" as const,
       bateriaAh: undefined,
       bateriaV: undefined,
       // Bombeo
@@ -169,6 +171,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const metodoPerfil = watch("metodoPerfil");
   const tipoBateria = watch("tipoBateria");
   const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
+  const panelSeleccionMetodo = watch("panelSeleccionMetodo");
 
   // Paso 4 (Baterías) solo aparece para sistemas aislados
   // Paso 5 (Rentabilidad) aparece para TODOS los sistemas
@@ -227,6 +230,22 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     const currentIdx = visibleSteps.findIndex(s => s.id === activeStep);
     if (currentIdx > 0) {
       setActiveStep(visibleSteps[currentIdx - 1].id);
+    }
+  };
+
+  const handleCalcular = async () => {
+    // Valida los campos económicos del paso 5 antes de enviar
+    const econFields: string[] = ["costoPorPanel", "costoInstalacion"];
+    if (tipoSistema === "aislado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones", "costoBaterias");
+    if (tipoSistema === "interconectado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones");
+    if (tipoSistema === "bombeo") econFields.push("costoBomba", "costoVariador");
+    if (tipoSistema !== "bombeo" && metodoPerfil === "cargas") econFields.push("precioKwh");
+
+    const isValid = await trigger(econFields as any);
+    if (isValid) {
+      handleSubmit(onSubmit)();
+    } else {
+      toast({ title: "Datos incompletos", description: "Completa los costos del sistema o usa 'Omitir análisis'.", variant: "destructive" });
     }
   };
 
@@ -445,30 +464,109 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                   {/* STEP 3 — Ficha Técnica del Panel */}
                   {activeStep === 3 && (
                     <div className="space-y-6">
-                      <div className="border-b border-border pb-4 mb-6">
+                      <div className="border-b border-border pb-4 mb-2">
                         <h2 className="text-2xl font-bold flex items-center gap-2"><Sun className="w-6 h-6 text-primary" /> Ficha Técnica del Panel</h2>
-                        <p className="text-muted-foreground mt-1">Parámetros eléctricos del módulo solar seleccionado.</p>
+                        <p className="text-muted-foreground mt-1">Selecciona un panel del catálogo o ingresa los parámetros manualmente.</p>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FormField label="Voltaje Nominal (Vnom) [V]" error={errors.panelVnom?.message}>
-                          <input type="number" step="any" {...methods.register("panelVnom")} className="input-field" />
-                        </FormField>
-                        <FormField label="Potencia (Pmax) [W]" error={errors.panelPotencia?.message}>
-                          <input type="number" step="any" {...methods.register("panelPotencia")} className="input-field" />
-                        </FormField>
-                        <FormField label="Voltaje Máxima Pot. (Vmp) [V]" error={errors.panelVmp?.message}>
-                          <input type="number" step="any" {...methods.register("panelVmp")} className="input-field" />
-                        </FormField>
-                        <FormField label="Corriente Máxima Pot. (Imp) [A]" error={errors.panelImp?.message}>
-                          <input type="number" step="any" {...methods.register("panelImp")} className="input-field" />
-                        </FormField>
-                        <FormField label="Voltaje Circuito Abierto (Voc) [V]" error={errors.panelVoc?.message}>
-                          <input type="number" step="any" {...methods.register("panelVoc")} className="input-field" />
-                        </FormField>
-                        <FormField label="Corriente Cortocircuito (Isc) [A]" error={errors.panelIsc?.message}>
-                          <input type="number" step="any" {...methods.register("panelIsc")} className="input-field" />
-                        </FormField>
+
+                      {/* Toggle catálogo / manual */}
+                      <div className="flex bg-muted p-1 rounded-xl max-w-sm">
+                        {[
+                          { value: "catalogo", label: "Catálogo" },
+                          { value: "manual",   label: "Manual" },
+                        ].map(opt => (
+                          <button
+                            key={opt.value} type="button"
+                            onClick={() => setValue("panelSeleccionMetodo", opt.value as "catalogo" | "manual")}
+                            className={cn(
+                              "flex-1 py-2 text-sm font-medium rounded-lg transition-all",
+                              panelSeleccionMetodo === opt.value
+                                ? "bg-white shadow-sm text-primary"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
                       </div>
+
+                      {/* Selector de catálogo */}
+                      {panelSeleccionMetodo !== "manual" && (
+                        <div className="space-y-4">
+                          <FormField label="Modelo de panel">
+                            <select
+                              className="input-field"
+                              defaultValue=""
+                              onChange={e => {
+                                const panel = CATALOGO_PANELES.find(p => `${p.fabricante} ${p.modelo}` === e.target.value);
+                                if (panel) {
+                                  setValue("panelVnom",     panel.Vnom);
+                                  setValue("panelPotencia", panel.Pmax);
+                                  setValue("panelVmp",      panel.Vmp);
+                                  setValue("panelImp",      panel.Imp);
+                                  setValue("panelVoc",      panel.Voc);
+                                  setValue("panelIsc",      panel.Isc);
+                                }
+                              }}
+                            >
+                              <option value="" disabled>Selecciona un modelo...</option>
+                              {["Canadian Solar", "JA Solar", "Jinko Solar", "LONGi", "Risen Energy", "Trina Solar", "Silfab Solar", "Astronergy"].map(fab => (
+                                <optgroup key={fab} label={fab}>
+                                  {CATALOGO_PANELES.filter(p => p.fabricante === fab).map(p => (
+                                    <option key={p.modelo} value={`${p.fabricante} ${p.modelo}`}>
+                                      {p.modelo} — {p.Pmax} W
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </FormField>
+
+                          {/* Previsualización de parámetros seleccionados */}
+                          {watch("panelPotencia") && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {[
+                                { label: "Vnom", value: watch("panelVnom"),     unit: "V" },
+                                { label: "Pmax", value: watch("panelPotencia"), unit: "W" },
+                                { label: "Vmp",  value: watch("panelVmp"),      unit: "V" },
+                                { label: "Imp",  value: watch("panelImp"),      unit: "A" },
+                                { label: "Voc",  value: watch("panelVoc"),      unit: "V" },
+                                { label: "Isc",  value: watch("panelIsc"),      unit: "A" },
+                              ].map(p => (
+                                <div key={p.label} className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
+                                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide">{p.label}</p>
+                                  <p className="text-lg font-bold text-foreground mt-0.5">{p.value}</p>
+                                  <p className="text-xs text-muted-foreground">{p.unit}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Entrada manual de parámetros */}
+                      {panelSeleccionMetodo === "manual" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                          <FormField label="Voltaje Nominal (Vnom) [V]" error={errors.panelVnom?.message}>
+                            <input type="number" step="any" {...methods.register("panelVnom")} className="input-field" placeholder="Ej. 24" />
+                          </FormField>
+                          <FormField label="Potencia Pico (Pmax) [W]" error={errors.panelPotencia?.message}>
+                            <input type="number" step="any" {...methods.register("panelPotencia")} className="input-field" placeholder="Ej. 450" />
+                          </FormField>
+                          <FormField label="Volt. en MPP (Vmp) [V]" error={errors.panelVmp?.message}>
+                            <input type="number" step="any" {...methods.register("panelVmp")} className="input-field" placeholder="Ej. 41.5" />
+                          </FormField>
+                          <FormField label="Corriente en MPP (Imp) [A]" error={errors.panelImp?.message}>
+                            <input type="number" step="any" {...methods.register("panelImp")} className="input-field" placeholder="Ej. 10.8" />
+                          </FormField>
+                          <FormField label="Volt. Circuito Abierto (Voc) [V]" error={errors.panelVoc?.message}>
+                            <input type="number" step="any" {...methods.register("panelVoc")} className="input-field" placeholder="Ej. 49.8" />
+                          </FormField>
+                          <FormField label="Corriente Cortocircuito (Isc) [A]" error={errors.panelIsc?.message}>
+                            <input type="number" step="any" {...methods.register("panelIsc")} className="input-field" placeholder="Ej. 11.4" />
+                          </FormField>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -533,9 +631,10 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                   </button>
                 ) : (
                   <button 
-                    type="submit" 
+                    type="button"
+                    onClick={handleCalcular}
                     disabled={calculateMutation.isPending}
-                    className="btn-primary"
+                    className="btn-next"
                   >
                     {calculateMutation.isPending ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Calculando...</>
