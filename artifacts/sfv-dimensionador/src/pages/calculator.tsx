@@ -82,6 +82,9 @@ const sfvSchema = z.object({
     if (!data.volumenLitros) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["volumenLitros"] });
     if (!data.alturaDebajo && data.alturaDebajo !== 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["alturaDebajo"] });
     if (!data.alturaEncima && data.alturaEncima !== 0) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Requerido", path: ["alturaEncima"] });
+    if ((data.alturaDebajo ?? 0) + (data.alturaEncima ?? 0) <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La suma de alturas debe ser mayor a 0", path: ["alturaDebajo"] });
+    }
     if (!data.usarHspParaBombeo && !data.horasBombeoManual) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ingresa las horas de bombeo", path: ["horasBombeoManual"] });
     }

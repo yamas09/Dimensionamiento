@@ -302,8 +302,12 @@ router.post("/calcular", (req, res) => {
 
   // ─── SISTEMA BOMBEO ───────────────────────────────────────────────
   if (data.tipoSistema === "bombeo") {
-    if (!data.volumenLitros || !data.alturaDebajo || !data.alturaEncima) {
+    if (!data.volumenLitros || data.alturaDebajo == null || data.alturaEncima == null) {
       res.status(400).json({ error: "Se requieren volumen, alturaDebajo y alturaEncima para sistema de bombeo." });
+      return;
+    }
+    if (data.alturaDebajo + data.alturaEncima <= 0) {
+      res.status(400).json({ error: "La suma de alturaDebajo y alturaEncima debe ser mayor a 0." });
       return;
     }
 
