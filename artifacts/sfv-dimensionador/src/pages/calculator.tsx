@@ -99,13 +99,14 @@ const sfvSchema = z.object({
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// id 3 = Ficha técnica, id 4 = Baterías (aislado), id 5 = Rentabilidad (todos los sistemas)
+// 1=Ubicación, 2=Tipo, 3=Perfil|Bombeo, 4=Ficha técnica, 5=Baterías(aislado), 6=Rentabilidad
 const STEPS = [
-  { id: 1, title: "Ubicación",     icon: MapPin },
-  { id: 2, title: "Perfil",        icon: Zap },
-  { id: 3, title: "Ficha técnica", icon: SolarPanelIcon },
-  { id: 4, title: "Baterías",      icon: Battery },
-  { id: 5, title: "Rentabilidad",  icon: DollarSign },
+  { id: 1, title: "Ubicación",      icon: MapPin },
+  { id: 2, title: "Tipo",           icon: Zap },
+  { id: 3, title: "Perfil",         icon: Zap },      // title overridden dynamically
+  { id: 4, title: "Ficha técnica",  icon: SolarPanelIcon },
+  { id: 5, title: "Baterías",       icon: Battery },
+  { id: 6, title: "Rentabilidad",   icon: DollarSign },
 ];
 
 interface CalculatorPageProps {
@@ -173,17 +174,18 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
   const panelSeleccionMetodo = watch("panelSeleccionMetodo");
 
-  // Paso 4 (Baterías) solo aparece para sistemas aislados
-  // Paso 5 (Rentabilidad) aparece para TODOS los sistemas
-  const visibleSteps = STEPS.filter(s => {
-    if (s.id === 4 && tipoSistema !== "aislado") return false;
-    return true;
-  });
+  // Step 5 (Baterías) solo aparece para aislado; step 6 (Rentabilidad) siempre
+  const visibleSteps = STEPS
+    .filter(s => !(s.id === 5 && tipoSistema !== "aislado"))
+    .map(s => s.id === 3
+      ? { ...s, title: tipoSistema === "bombeo" ? "Bombeo" : "Perfil" }
+      : s
+    );
 
-  // Si el usuario cambia el tipo de sistema, regresar a un paso visible
+  // Si el usuario cambia el tipo de sistema y está en baterías (5), volver a ficha (4)
   useEffect(() => {
-    if (tipoSistema !== "aislado" && activeStep === 4) {
-      setActiveStep(3);
+    if (tipoSistema !== "aislado" && activeStep === 5) {
+      setActiveStep(4);
     }
   }, [tipoSistema]);
 
@@ -192,27 +194,22 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
     if (activeStep === 1) fieldsToValidate = ["latitud", "longitud", "hsp"];
-    if (activeStep === 2) {
+    // Paso 2 = Tipo de Sistema: sin validación de campos, solo avanzar
+    if (activeStep === 2) fieldsToValidate = [];
+    // Paso 3 = Perfil o Bombeo
+    if (activeStep === 3) {
       if (tipoSistema === "bombeo") {
         fieldsToValidate = ["volumenLitros", "alturaDebajo", "alturaEncima"];
         if (!watch("usarHspParaBombeo")) fieldsToValidate.push("horasBombeoManual");
       } else {
-        fieldsToValidate = ["tipoSistema", "metodoPerfil", "cargas", "registrosRecibo", "diasPeriodoRecibo"];
+        if (metodoPerfil === "cargas") fieldsToValidate = ["cargas"];
+        else fieldsToValidate = ["registrosRecibo", "diasPeriodoRecibo"];
       }
     }
-    // Paso 3 = Panel: valida ficha técnica antes de continuar
-    if (activeStep === 3) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
-    // Paso 4 = Baterías (solo para aislado): valida los campos de batería antes de calcular
-    if (activeStep === 4) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
-    // Paso 5 = Rentabilidad: valida costos solo si no se omite
-    if (activeStep === 5 && !omitirEconomico) {
-      const econFields: string[] = ["costoPorPanel", "costoInstalacion"];
-      if (tipoSistema === "aislado") { econFields.push("costoInversor", "costoRegulador", "costoProtecciones", "costoBaterias"); }
-      if (tipoSistema === "interconectado") { econFields.push("costoInversor", "costoRegulador", "costoProtecciones"); }
-      if (tipoSistema === "bombeo") { econFields.push("costoBomba", "costoVariador"); }
-      if (tipoSistema !== "bombeo" && metodoPerfil === "cargas") econFields.push("precioKwh");
-      fieldsToValidate = econFields;
-    }
+    // Paso 4 = Ficha técnica: valida parámetros del panel
+    if (activeStep === 4) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
+    // Paso 5 = Baterías (solo aislado)
+    if (activeStep === 5) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
     
     const isValid = await trigger(fieldsToValidate as any);
     
@@ -234,7 +231,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   };
 
   const handleCalcular = async () => {
-    // Valida los campos económicos del paso 5 antes de enviar
+    // Valida los campos económicos del paso 6 antes de enviar
     const econFields: string[] = ["costoPorPanel", "costoInstalacion"];
     if (tipoSistema === "aislado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones", "costoBaterias");
     if (tipoSistema === "interconectado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones");
@@ -388,8 +385,50 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                     </div>
                   )}
 
-                  {/* STEP 2 */}
+                  {/* STEP 2 — Tipo de Sistema */}
                   {activeStep === 2 && (
+                    <div className="space-y-8">
+                      <div className="border-b border-border pb-4 mb-2">
+                        <h2 className="text-2xl font-bold flex items-center gap-2"><Zap className="w-6 h-6 text-primary" /> Tipo de Sistema</h2>
+                        <p className="text-muted-foreground mt-1">Selecciona el tipo de sistema fotovoltaico que deseas dimensionar.</p>
+                      </div>
+                      <Controller
+                        control={control}
+                        name="tipoSistema"
+                        render={({ field }) => (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+                            {[
+                              { value: "aislado",        label: "Aislado",         desc: "Sin conexión a la red eléctrica. Requiere banco de baterías.", icon: Battery },
+                              { value: "interconectado", label: "Interconectado",  desc: "Conectado a la red eléctrica. Inyecta excedentes.", icon: Zap },
+                              { value: "bombeo",         label: "Bombeo Solar",    desc: "Alimenta una bomba de agua directamente con energía solar.", icon: Droplets },
+                            ].map(({ value, label, desc, icon: Icon }) => (
+                              <button
+                                key={value} type="button"
+                                onClick={() => field.onChange(value)}
+                                className={cn(
+                                  "flex flex-col items-start text-left p-5 rounded-2xl border-2 transition-all duration-200 gap-3",
+                                  field.value === value
+                                    ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                                    : "border-border hover:border-primary/40 hover:bg-muted/30"
+                                )}
+                              >
+                                <div className={cn("p-2.5 rounded-xl", field.value === value ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+                                  <Icon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className={cn("font-bold text-base", field.value === value ? "text-primary" : "text-foreground")}>{label}</p>
+                                  <p className="text-sm text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {/* STEP 3 — Perfil de Consumo o Parámetros de Bombeo */}
+                  {activeStep === 3 && (
                     <div className="space-y-6">
                       <div className="border-b border-border pb-4 mb-6">
                         <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -400,69 +439,38 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                         </h2>
                         <p className="text-muted-foreground mt-1">
                           {tipoSistema === "bombeo"
-                            ? "Ingrese los datos hidráulicos del sistema de bombeo."
-                            : "Defina cómo evaluaremos la demanda energética."
+                            ? "Ingresa los datos hidráulicos del sistema de bombeo."
+                            : "Define cómo evaluaremos la demanda energética del sitio."
                           }
                         </p>
                       </div>
-
-                      {/* Selector de tipo de sistema (siempre visible) */}
-                      <FormField label="Tipo de Sistema">
-                        <Controller
-                          control={control}
-                          name="tipoSistema"
-                          render={({ field }) => (
-                            <div className="flex bg-muted p-1 rounded-xl max-w-sm">
-                              {["aislado", "interconectado", "bombeo"].map(t => (
-                                <button
-                                  key={t} type="button"
-                                  onClick={() => field.onChange(t)}
-                                  className={cn("flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
-                                >
-                                  {t}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        />
-                      </FormField>
-
-                      {/* Bombeo: parámetros hidráulicos */}
                       {tipoSistema === "bombeo" ? (
                         <BombeoParamsStep register={methods.register} control={control} errors={errors} watch={watch} setValue={setValue} />
                       ) : (
                         <>
                           <FormField label="Método de Perfil">
-                            <Controller
-                              control={control}
-                              name="metodoPerfil"
-                              render={({ field }) => (
-                                <div className="flex bg-muted p-1 rounded-xl max-w-xs">
-                                  {["cargas", "recibo"].map(t => (
-                                    <button
-                                      key={t} type="button"
-                                      onClick={() => field.onChange(t)}
-                                      className={cn("flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all", field.value === t ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}
-                                    >
-                                      {t}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            />
+                            <Controller control={control} name="metodoPerfil" render={({ field }) => (
+                              <div className="flex bg-muted p-1 rounded-xl max-w-xs">
+                                {[{ value: "cargas", label: "Lista de cargas" }, { value: "recibo", label: "Historial de recibos" }].map(t => (
+                                  <button key={t.value} type="button" onClick={() => field.onChange(t.value)}
+                                    className={cn("flex-1 py-2 text-sm font-medium rounded-lg transition-all px-3", field.value === t.value ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground")}>
+                                    {t.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )} />
                           </FormField>
-                          {metodoPerfil === "cargas" ? (
-                            <CargasTable control={control} register={methods.register} errors={errors} />
-                          ) : (
-                            <RecibosTable control={control} register={methods.register} errors={errors} />
-                          )}
+                          {metodoPerfil === "cargas"
+                            ? <CargasTable control={control} register={methods.register} errors={errors} />
+                            : <RecibosTable control={control} register={methods.register} errors={errors} />
+                          }
                         </>
                       )}
                     </div>
                   )}
 
-                  {/* STEP 3 — Ficha Técnica del Panel */}
-                  {activeStep === 3 && (
+                  {/* STEP 4 — Ficha Técnica del Panel */}
+                  {activeStep === 4 && (
                     <div className="space-y-6">
                       <div className="border-b border-border pb-4 mb-2">
                         <h2 className="text-2xl font-bold flex items-center gap-2"><Sun className="w-6 h-6 text-primary" /> Ficha Técnica del Panel</h2>
@@ -570,8 +578,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                     </div>
                   )}
 
-                  {/* STEP 4 — Baterías (solo para sistema aislado) */}
-                  {activeStep === 4 && (
+                  {/* STEP 5 — Baterías (solo para sistema aislado) */}
+                  {activeStep === 5 && (
                     <BateriasStep
                       control={control}
                       register={methods.register}
@@ -583,8 +591,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                     />
                   )}
 
-                  {/* STEP 5 — Módulo Económico */}
-                  {activeStep === 5 && (
+                  {/* STEP 6 — Módulo Económico */}
+                  {activeStep === 6 && (
                     <EconomicoStep
                       register={methods.register}
                       control={control}

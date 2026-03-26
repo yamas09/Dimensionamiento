@@ -34,9 +34,8 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
         </button>
       </div>
 
-      {/* ═══════════════════════════════════════════════════ */}
-      {/* SECCIÓN 1 — DIMENSIONAMIENTO                      */}
-      {/* ═══════════════════════════════════════════════════ */}
+      {/* SECCIÓN 1 — DIMENSIONAMIENTO */}
+      <div className="bg-gradient-to-br from-orange-50/80 to-amber-50/20 rounded-3xl p-5 md:p-7 space-y-6 border border-orange-100">
       <SectionHeader icon={<Sun className="w-5 h-5 text-primary" />} title="Dimensionamiento" color="orange" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -167,10 +166,10 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </div>
         </div>
       </div>
+      </div>{/* /section-1 */}
 
-      {/* ═══════════════════════════════════════════════════ */}
-      {/* SECCIÓN 2 — ELÉCTRICO                             */}
-      {/* ═══════════════════════════════════════════════════ */}
+      {/* SECCIÓN 2 — ELÉCTRICO */}
+      <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/20 rounded-3xl p-5 md:p-7 space-y-6 border border-amber-100">
       <SectionHeader icon={<Zap className="w-5 h-5 text-amber-500" />} title="Eléctrico" color="amber" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -222,10 +221,10 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </ResponsiveContainer>
         </div>
       </div>
+      </div>{/* /section-2 */}
 
-      {/* ═══════════════════════════════════════════════════ */}
-      {/* SECCIÓN 3 — AMBIENTAL                             */}
-      {/* ═══════════════════════════════════════════════════ */}
+      {/* SECCIÓN 3 — AMBIENTAL */}
+      <div className="bg-gradient-to-br from-green-50/80 to-emerald-50/20 rounded-3xl p-5 md:p-7 space-y-6 border border-green-100">
       <SectionHeader icon={<Leaf className="w-5 h-5 text-green-600" />} title="Ambiental" color="green" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -303,10 +302,9 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </div>
         </div>
       </div>
+      </div>{/* /section-3 */}
 
-      {/* ═══════════════════════════════════════════════════ */}
-      {/* SECCIÓN 4 — ECONÓMICO (solo si existe)            */}
-      {/* ═══════════════════════════════════════════════════ */}
+      {/* SECCIÓN 4 — ECONÓMICO (solo si existe) */}
       {data.economico && (() => {
         const eco = data.economico!;
         const fmt = (n: number) =>
@@ -316,7 +314,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
         const flujoData = (eco.flujoCaja ?? []).map((val, i) => ({ year: i, flujo: val }));
 
         return (
-          <>
+          <div className="bg-gradient-to-br from-violet-50/80 to-purple-50/20 rounded-3xl p-5 md:p-7 space-y-6 border border-violet-100">
             <SectionHeader icon={<DollarSign className="w-5 h-5 text-violet-600" />} title="Económico" color="violet" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -430,7 +428,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
                 </div>
               </div>
             )}
-          </>
+          </div>
         );
       })()}
     </div>
