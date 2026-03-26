@@ -153,7 +153,9 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
             <SpecRow label="Cableado (I_min)" value={`${data.cableado.corrienteMinima.toFixed(2)} A`} />
             {data.protecciones && (
               <>
-                <SpecRow label="Fusible CC" value={`${data.protecciones.corrienteFusible.toFixed(2)} A`} accent />
+                {data.protecciones.corrienteFusible !== undefined && (
+                  <SpecRow label="Fusible CC" value={`${data.protecciones.corrienteFusible.toFixed(2)} A`} accent />
+                )}
                 {data.protecciones.breakerCC !== undefined && (
                   <SpecRow label="Breaker CC" value={`${data.protecciones.breakerCC.toFixed(2)} A`} accent />
                 )}
