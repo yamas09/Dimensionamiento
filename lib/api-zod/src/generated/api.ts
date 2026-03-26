@@ -87,6 +87,7 @@ export const CalcularSFVBody = zod.object({
 export const CalcularSFVResponse = zod.object({
   energiaDiariaKwh: zod.number(),
   potenciaDemandaKw: zod.number(),
+  anguloInclinacion: zod.number().describe("Ángulo óptimo de inclinación de los paneles [°] = |latitud| + 10"),
   paneles: zod.object({
     totalPaneles: zod.number(),
     panelesSerie: zod.number(),

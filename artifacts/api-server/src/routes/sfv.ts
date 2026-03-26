@@ -387,9 +387,12 @@ router.post("/calcular", (req, res) => {
       };
     }
 
+    const anguloInclinacionBombeo = parseFloat((Math.abs(data.latitud) + 10).toFixed(1));
+
     const resultado: any = {
       energiaDiariaKwh: parseFloat(energiaDiariaNecesaria.toFixed(4)),
       potenciaDemandaKw: parseFloat((potenciaElectricaW / 1000).toFixed(4)),
+      anguloInclinacion: anguloInclinacionBombeo,
       paneles: { totalPaneles: panelesTotal, panelesSerie, panelesParalelo, voltajeSistema, corrienteSistema },
       cableado: { corrienteMinima: corrienteCable },
       bomba: {
@@ -559,9 +562,12 @@ router.post("/calcular", (req, res) => {
     };
   }
 
+  const anguloInclinacion = parseFloat((Math.abs(data.latitud) + 10).toFixed(1));
+
   const resultado: CalcularSFVResponse = {
     energiaDiariaKwh: energiaKwh,
     potenciaDemandaKw: potenciaKw,
+    anguloInclinacion,
     paneles: { totalPaneles, panelesSerie, panelesParalelo, voltajeSistema, corrienteSistema },
     ...(bateriasResult ? { baterias: bateriasResult } : {}),
     ...(inversorResult ? { inversor: inversorResult } : {}),

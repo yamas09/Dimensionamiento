@@ -165,6 +165,85 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
             )}
           </div>
         </div>
+        {/* Ángulo óptimo de inclinación */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-3 bg-primary/10 rounded-xl text-primary">
+              <Sun className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Ángulo Óptimo de Inclinación</h3>
+              <p className="text-sm text-muted-foreground">Calculado según IDAE: β = |latitud| + 10°</p>
+            </div>
+            <div className="ml-auto text-4xl font-bold text-primary">{data.anguloInclinacion}°</div>
+          </div>
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            {/* SVG diagrama */}
+            <div className="w-full md:w-72 shrink-0">
+              {(() => {
+                const β = data.anguloInclinacion;
+                const βRad = (β * Math.PI) / 180;
+                const arcR = 44;
+                const arcX = 50 + arcR * Math.cos(βRad);
+                const arcY = 100 - arcR * Math.sin(βRad);
+                const midAngleRad = βRad / 2;
+                return (
+                  <svg viewBox="0 0 220 128" className="w-full h-auto" aria-label={`Diagrama de inclinación ${β}°`}>
+                    {/* Fondo suave */}
+                    <rect x="0" y="0" width="220" height="128" rx="12" fill="#fafafa" />
+                    {/* Línea de tierra */}
+                    <line x1="10" y1="100" x2="210" y2="100" stroke="#64748b" strokeWidth="2" />
+                    {/* Trazos de tierra */}
+                    {Array.from({ length: 11 }, (_, i) => (
+                      <line key={i} x1={15 + i * 18} y1="100" x2={8 + i * 18} y2="112" stroke="#94a3b8" strokeWidth="1" />
+                    ))}
+                    {/* Panel solar */}
+                    <g transform={`translate(50,100) rotate(-${β})`}>
+                      <rect x="0" y="-11" width="130" height="11" rx="2" fill="#f97316" stroke="#c2410c" strokeWidth="1" />
+                      {[33, 66, 99].map(x => (
+                        <line key={x} x1={x} y1="-11" x2={x} y2="0" stroke="#c2410c" strokeWidth="0.7" opacity="0.6" />
+                      ))}
+                      <line x1="0" y1="-5.5" x2="130" y2="-5.5" stroke="#c2410c" strokeWidth="0.7" opacity="0.6" />
+                    </g>
+                    {/* Línea de referencia horizontal */}
+                    <line x1="50" y1="100" x2="120" y2="100" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 3" />
+                    {/* Arco del ángulo */}
+                    <path
+                      d={`M ${50 + arcR} 100 A ${arcR} ${arcR} 0 0 0 ${arcX.toFixed(2)} ${arcY.toFixed(2)}`}
+                      fill="none" stroke="#f97316" strokeWidth="2" strokeDasharray="4 2"
+                    />
+                    {/* Etiqueta del ángulo */}
+                    <text
+                      x={(50 + (arcR + 17) * Math.cos(midAngleRad)).toFixed(1)}
+                      y={(100 - (arcR + 17) * Math.sin(midAngleRad)).toFixed(1)}
+                      fontSize="13" fontWeight="bold" fill="#ea580c"
+                      textAnchor="middle" dominantBaseline="middle"
+                    >
+                      {β}°
+                    </text>
+                    {/* Etiqueta Sur */}
+                    <text x="195" y="94" fontSize="9" fill="#94a3b8" textAnchor="middle">Sur ☀</text>
+                  </svg>
+                );
+              })()}
+            </div>
+            {/* Texto explicativo */}
+            <div className="flex-1 space-y-3 text-sm text-muted-foreground">
+              <p>
+                Para maximizar la captación anual de energía solar, los paneles deben orientarse hacia el <strong>sur geográfico</strong> (hemisferio norte) con una inclinación de <strong>{data.anguloInclinacion}°</strong> respecto a la horizontal.
+              </p>
+              <p>
+                Esta recomendación está basada en la metodología del <strong>IDAE</strong> (Instituto para la Diversificación y Ahorro de la Energía), que establece β = |φ| + 10° para instalaciones de uso anual continuo.
+              </p>
+              <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                <p className="text-orange-800 text-xs">
+                  <strong>Nota:</strong> Asegúrate de que no existan sombras sobre los paneles en el ángulo seleccionado. Ajusta la inclinación según las condiciones específicas del sitio si es necesario.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
       </div>{/* /section-1 */}
 

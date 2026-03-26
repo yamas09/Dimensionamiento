@@ -205,6 +205,8 @@ export interface ResultadoEconomico {
 export interface SFVResultado {
   energiaDiariaKwh: number;
   potenciaDemandaKw: number;
+  /** Ángulo óptimo de inclinación de los paneles [°] = |latitud| + 10 */
+  anguloInclinacion: number;
   paneles: ResultadoPaneles;
   baterias?: ResultadoBaterias;
   inversor?: ResultadoInversor;
