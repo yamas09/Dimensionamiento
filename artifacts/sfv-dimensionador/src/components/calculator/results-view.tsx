@@ -16,6 +16,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
   }));
 
   const isBombeo = !!data.bomba;
+  const isInterconectado = !data.bomba && !data.baterias;
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-forwards">
@@ -173,7 +174,9 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
             </div>
             <div>
               <h3 className="text-xl font-bold">Ángulo Óptimo de Inclinación</h3>
-              <p className="text-sm text-muted-foreground">Calculado según IDAE: β = |latitud| + 10°</p>
+              <p className="text-sm text-muted-foreground">
+                {isInterconectado ? "Fórmula optimizada: β = 3.7 + 0.69 × φ" : "Según IDAE (uso anual): β = |φ| + 10°"}
+              </p>
             </div>
             <div className="ml-auto text-4xl font-bold text-primary">{data.anguloInclinacion}°</div>
           </div>
@@ -221,8 +224,8 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
                     >
                       {β}°
                     </text>
-                    {/* Etiqueta Sur */}
-                    <text x="195" y="94" fontSize="9" fill="#94a3b8" textAnchor="middle">Sur ☀</text>
+                    {/* Etiqueta orientación */}
+                    <text x="195" y="94" fontSize="9" fill="#94a3b8" textAnchor="middle">{data.orientacion === "sur" ? "Sur ☀" : "Norte ☀"}</text>
                   </svg>
                 );
               })()}
@@ -230,10 +233,15 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
             {/* Texto explicativo */}
             <div className="flex-1 space-y-3 text-sm text-muted-foreground">
               <p>
-                Para maximizar la captación anual de energía solar, los paneles deben orientarse hacia el <strong>sur geográfico</strong> (hemisferio norte) con una inclinación de <strong>{data.anguloInclinacion}°</strong> respecto a la horizontal.
+                Para maximizar la captación anual de energía solar, los paneles deben orientarse hacia el{" "}
+                <strong>{data.orientacion === "sur" ? "sur geográfico" : "norte geográfico"}</strong> con una inclinación de{" "}
+                <strong>{data.anguloInclinacion}°</strong> respecto a la horizontal.
               </p>
               <p>
-                Esta recomendación está basada en la metodología del <strong>IDAE</strong> (Instituto para la Diversificación y Ahorro de la Energía), que establece β = |φ| + 10° para instalaciones de uso anual continuo.
+                {isInterconectado
+                  ? <>Esta inclinación está calculada con la fórmula optimizada <strong>β = 3.7 + 0.69 × φ</strong> para sistemas interconectados.</>
+                  : <>Esta recomendación está basada en la metodología del <strong>IDAE</strong> (Instituto para la Diversificación y Ahorro de la Energía), que establece <strong>β = |φ| + 10°</strong> para instalaciones de uso anual continuo.</>
+                }
               </p>
               <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
                 <p className="text-orange-800 text-xs">
