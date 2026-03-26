@@ -1,0 +1,138 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# Costo total del sistema
+def costo_total_sistema_ais(costo_panel_total,costo_inversor,costo_regulador,costo_baterias,costo_protecciones,costo_instalacion,costo_cableado):
+    costo_total=costo_panel_total+costo_inversor+costo_regulador+costo_baterias+costo_protecciones+costo_instalacion+costo_cableado
+    return costo_total
+
+def costo_total_sistema_int(costo_panel_total,costo_inversor,costo_instalacion,costo_protecciones,costo_regulador,costo_cableado):
+    costo_total=costo_panel_total+costo_inversor+costo_instalacion+costo_protecciones+costo_regulador+costo_cableado
+    return costo_total
+
+def costo_total_sistema_bombeo(costo_panel,costo_bomba,costo_instalacion,costo_cableado,costo_variador):
+    costo_total=costo_panel+costo_bomba+costo_instalacion+costo_cableado+costo_variador
+    return costo_total
+
+# Ahorro anual de gasto eléctrico
+def ahorro_energia(energia_anual_inicial,precio_kwh):
+    ahorro_anual=energia_anual_inicial*precio_kwh
+    return ahorro_anual
+
+#Cálculo del ROI
+def periodo_retorno(costo_total,ahorro_anual):
+    if ahorro_anual==0:
+        return None
+    roi=costo_total/ahorro_anual
+    return roi
+
+def ahorro_economico_vida_util(energia_anual_inicial,precio_kwh,tasa_degradacion=0.005,vida_util=25):
+    ahorros = []
+    for n in range(vida_util):
+        energia = energia_anual_inicial*((1 - tasa_degradacion) ** n)
+        ahorro = energia*precio_kwh
+        ahorros.append(ahorro)
+    return np.array(ahorros)
+
+def ahorro_total_acumulado(vector_ahorros):
+    return np.sum(vector_ahorros)
+
+#Ahorro económico a lo largo de la vida útil del sistema
+def flujo_caja_acumulado(costo_total, vector_ahorros):
+    flujo = [-costo_total]  # Año 0 inversión inicial negativa
+    for ahorro in vector_ahorros:
+        flujo.append(flujo[-1] + ahorro)
+    return np.array(flujo)
+
+def calcular_payback_real(flujo_acumulado):
+    for año, valor in enumerate(flujo_acumulado):
+        if valor >= 0:
+            return año
+    return None  # no se recupera en vida útil
+
+def grafica_retorno_inversion(flujo_acumulado):
+    años = np.arange(0, len(flujo_acumulado))
+    plt.figure()
+    plt.plot(años, flujo_acumulado, marker="o")
+    plt.axhline(0)  # línea de equilibrio
+    plt.title("Retorno de Inversión (ROI) del Sistema FV")
+    plt.xlabel("Años")
+    plt.ylabel("Flujo de caja acumulado [$]")
+    plt.grid(True)
+    return plt
+
+#============PARA BOMBEO ESPECIFICOS=============
+
+def costo_bombeo_convencional(energia_anual_kwh=None, precio_kwh=None,
+                             consumo_diesel_litros=None, precio_diesel=None):
+    if energia_anual_kwh and precio_kwh:
+        return energia_anual_kwh * precio_kwh
+    elif consumo_diesel_litros and precio_diesel:
+        return consumo_diesel_litros * precio_diesel
+    else:
+        raise ValueError("Datos insuficientes para calcular costo convencional")
+    
+#Se define un costo de mantenimiento anual como un porcentaje del costo total del sistema, típicamente entre el 1% y el 3% anual.
+def costo_mantenimiento(costo_total, porcentaje=0.02):
+    return costo_total * porcentaje
+
+def ahorro_anual_bombeo(costo_convencional, costo_solar):
+    return costo_convencional - costo_solar
+
+def payback(costo_total, ahorro_anual):
+    return costo_total / ahorro_anual
+
+def flujo_caja_bombeo(costo_total, ahorro_anual, tasa_degradacion=0.005, vida_util=25):
+    flujo = []
+    acumulado = -costo_total
+    for año in range(vida_util):
+        ahorro_real = ahorro_anual * ((1 - tasa_degradacion) ** año)
+        acumulado += ahorro_real
+        flujo.append(acumulado)
+    return flujo
+
+def graficar_roi(flujo):
+    años = list(range(1, len(flujo) + 1))
+    plt.figure()
+    plt.plot(años, flujo, marker='o')  # Línea de referencia (cuando ROI = 0)
+    #Detectar el año en que el flujo de caja acumulado se vuelve positivo
+    for i, valor in enumerate(flujo):
+        if valor > 0:
+            plt.axvline(i+1)
+            break
+    plt.axhline(0)
+    plt.title("Retorno de Inversión (ROI) del Sistema FV de Bombeo")
+    plt.xlabel("Años")
+    plt.ylabel("Flujo de caja acumulado [$]")
+    plt.grid()
+    plt.show()
+
+
+def graficar_comparacion_roi(costo_total, costo_convencional_anual, ahorro_anual,
+                            tasa_degradacion=0.005, vida_util=25):
+
+    años = list(range(1, vida_util + 1))
+    flujo_solar = []
+    flujo_convencional = []
+    acumulado_solar = -costo_total
+    acumulado_convencional = 0
+    for año in range(vida_util):
+        #Sistema convencional (no hay inversión inicial, solo gasto anual)
+        acumulado_convencional -= costo_convencional_anual
+        flujo_convencional.append(acumulado_convencional)
+
+        #Sistema solar (considera un ahorro con degradación)
+        ahorro_real = ahorro_anual * ((1 - tasa_degradacion) ** año)
+        acumulado_solar += ahorro_real
+        flujo_solar.append(acumulado_solar)
+    plt.figure()
+    plt.plot(años, flujo_solar, marker='o', label="Sistema Solar")
+    plt.plot(años, flujo_convencional, linestyle='--', label="Sistema Convencional")
+    plt.axhline(0)
+    plt.title("Comparación ROI: Sistema Solar vs Convencional")
+    plt.xlabel("Años")
+    plt.ylabel("Costo / Ahorro acumulado [$]")
+    plt.legend()
+    plt.grid()
+    plt.show()
