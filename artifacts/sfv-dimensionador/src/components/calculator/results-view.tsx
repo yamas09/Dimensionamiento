@@ -1,4 +1,4 @@
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine, Legend } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine, ReferenceDot, Legend } from "recharts";
 import { SFVResultado } from "@workspace/api-client-react";
 import { Leaf, Sun, Zap, Battery, Cpu, Activity, Info, DollarSign, TrendingUp, PiggyBank, Clock, RotateCcw, Droplets, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -536,7 +536,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
                 </p>
                 <div className="h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={flujoData} margin={{ top: 10, right: 20, bottom: 30, left: 70 }}>
+                    <AreaChart data={flujoData} margin={{ top: 24, right: 24, bottom: 30, left: 70 }}>
                       <defs>
                         <linearGradient id="colorFlujoPos" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.3} />
@@ -562,7 +562,20 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
                         tickFormatter={(v) => v >= 0 ? `$${(v / 1000).toFixed(0)}k` : `-$${(Math.abs(v) / 1000).toFixed(0)}k`}
                         label={{ value: 'Flujo [$MXN]', angle: -90, position: 'insideLeft', offset: -50, fontSize: 12, fill: '#94a3b8', fontWeight: 600 }}
                       />
-                      <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="6 3" strokeWidth={2} label={{ value: "Punto de equilibrio", position: "right", fontSize: 11, fill: "#8b5cf6" }} />
+                      {/* Línea de equilibrio visible */}
+                      <ReferenceLine
+                        y={0}
+                        stroke="#7c3aed"
+                        strokeDasharray="6 4"
+                        strokeWidth={2.5}
+                        label={{
+                          value: "▶ Punto de equilibrio",
+                          position: "insideTopLeft",
+                          fill: "#7c3aed",
+                          fontWeight: 700,
+                          fontSize: 12,
+                        }}
+                      />
                       <Tooltip
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                         formatter={(val: number) => [
@@ -579,6 +592,28 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
                         fillOpacity={1}
                         fill="url(#colorFlujoPos)"
                       />
+                      {/* Marcador en el año de recuperación */}
+                      {eco.payback !== null && (() => {
+                        const yr = Math.ceil(eco.payback!);
+                        const yVal = flujoData[yr]?.flujo ?? 0;
+                        return (
+                          <ReferenceDot
+                            x={yr}
+                            y={yVal}
+                            r={8}
+                            fill="#7c3aed"
+                            stroke="white"
+                            strokeWidth={2.5}
+                            label={{
+                              value: `Año ${yr}`,
+                              position: 'top',
+                              fill: '#7c3aed',
+                              fontWeight: 700,
+                              fontSize: 12,
+                            }}
+                          />
+                        );
+                      })()}
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
