@@ -537,8 +537,8 @@ router.post("/calcular", (req, res) => {
     } as CalcularSFVResponse["protecciones"];
   }
 
-  // 8. Ambiental (usa energíaDiaria real del perfil de consumo × 365)
-  const energiaAnualKwh = energiaKwh * 365;
+  // 8. Ambiental (usa energía post-paneles × 365, fiel al Python: energia_post_paneles = paneles * potencia_panel * hsp)
+  const energiaAnualKwh = energiaPostPanelesKwh * 365;
   const ahorroCo2PrimerAnio = parseFloat((energiaAnualKwh * FACTOR_EMISION_CO2).toFixed(2));
   const { degradacion, ahorrosCo2 } = calcularVectoresAmbientales(energiaAnualKwh);
   const ahorroCo2TotalTon = parseFloat((ahorrosCo2.reduce((s, v) => s + v, 0) / 1000).toFixed(2));
@@ -547,7 +547,8 @@ router.post("/calcular", (req, res) => {
   let economicoResult: CalcularSFVResponse["economico"] | undefined;
   if (data.costoPorPanel !== undefined) {
     const precioKwh = data.metodoPerfil === "recibo" ? (precioKwhRecibo ?? 0) : (data.precioKwh ?? 0);
-    const costoPanelTotal = data.costoPorPanel * totalPaneles;
+    // Python: costo_panel_total = costo_panel * paneles_serie * paneles_paralelo (paneles físicamente instalados)
+    const costoPanelTotal = data.costoPorPanel * (panelesSerie * panelesParalelo);
     let costoTotal: number;
     if (data.tipoSistema === "aislado") {
       costoTotal = costoTotalAislado(
@@ -588,7 +589,8 @@ router.post("/calcular", (req, res) => {
     potenciaDemandaKw: potenciaKw,
     anguloInclinacion,
     orientacion,
-    paneles: { totalPaneles, panelesSerie, panelesParalelo, voltajeSistema, corrienteSistema },
+    // Python: "total de paneles a instalar" = paneles_serie * paneles_paralelo (instalados físicamente)
+    paneles: { totalPaneles: panelesSerie * panelesParalelo, panelesSerie, panelesParalelo, voltajeSistema, corrienteSistema },
     ...(bateriasResult ? { baterias: bateriasResult } : {}),
     ...(inversorResult ? { inversor: inversorResult } : {}),
     ...(reguladorResult ? { regulador: reguladorResult } : {}),
