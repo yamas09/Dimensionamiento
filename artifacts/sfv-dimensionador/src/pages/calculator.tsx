@@ -937,7 +937,6 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
             {(CATALOGO_BATERIAS[tipoBateria] ?? []).map((bat) => {
               const compatible = voltajeSistema % bat.V === 0;
               const isSelected = bateriaAh === bat.Ah && bateriaV === bat.V;
-              const meetsCn = cnAh !== null ? bat.Ah >= cnAh : true;
               return (
                 <button
                   key={bat.modelo} type="button"
@@ -962,11 +961,6 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
                       {bat.modelo}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{bat.Ah} Ah · {bat.V} V</p>
-                    {compatible && cnAh !== null && (
-                      <p className={cn("text-xs mt-1 font-medium", meetsCn ? "text-orange-600" : "text-amber-600")}>
-                        {meetsCn ? `✓ Cumple Cn (${cnAh} Ah req.)` : `⚠ Insuf. — Cn req. ${cnAh} Ah`}
-                      </p>
-                    )}
                     {!compatible && (
                       <p className="text-xs mt-1 text-red-500 font-medium">
                         Incompatible con {voltajeSistema}V
