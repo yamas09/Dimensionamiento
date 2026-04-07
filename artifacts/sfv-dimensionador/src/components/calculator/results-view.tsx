@@ -40,8 +40,11 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
       <SectionHeader icon={<Sun className="w-5 h-5 text-primary" />} title="Dimensionamiento" color="orange" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Arreglo Fotovoltaico */}
-        <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border relative overflow-hidden group">
+        {/* Arreglo Fotovoltaico — ancho completo cuando no hay tarjeta de par (interconectado) */}
+        <div className={cn(
+          "bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border relative overflow-hidden group",
+          !data.baterias && !data.bomba && "lg:col-span-2"
+        )}>
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
             <Sun className="w-32 h-32" />
           </div>
@@ -135,8 +138,11 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
           </div>
         )}
 
-        {/* Componentes Eléctricos */}
-        <div className="bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border">
+        {/* Componentes Eléctricos — ancho completo cuando no hay variador (aislado/interconectado) */}
+        <div className={cn(
+          "bg-white rounded-2xl p-6 shadow-md shadow-black/5 border border-border",
+          !data.variador && "lg:col-span-2"
+        )}>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-purple-500/10 rounded-xl text-purple-600">
               <Cpu className="w-6 h-6" />
