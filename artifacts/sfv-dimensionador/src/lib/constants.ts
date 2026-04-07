@@ -14,23 +14,14 @@ export interface PanelModelo {
 }
 
 export const CATALOGO_PANELES: PanelModelo[] = [
-  { modelo: "CS6K-300MS",          fabricante: "Canadian Solar", tipo: "Monocristalino", Vnom: 24, Pmax: 300, Vmp: 32.8, Imp:  9.14, Voc: 40.4, Isc:  9.70 },
-  { modelo: "CS6L-330M",           fabricante: "Canadian Solar", tipo: "Monocristalino", Vnom: 24, Pmax: 330, Vmp: 35.8, Imp:  9.22, Voc: 44.2, Isc:  9.87 },
-  { modelo: "CS6P-270P",           fabricante: "Canadian Solar", tipo: "Policristalino",  Vnom: 24, Pmax: 270, Vmp: 31.0, Imp:  8.71, Voc: 38.2, Isc:  9.29 },
-  { modelo: "HiKu CS3W-415MS",     fabricante: "Canadian Solar", tipo: "Monocristalino", Vnom: 24, Pmax: 415, Vmp: 39.1, Imp: 10.62, Voc: 47.4, Isc: 11.22 },
-  { modelo: "JAM60S20-340/MR",     fabricante: "JA Solar",       tipo: "Monocristalino", Vnom: 24, Pmax: 340, Vmp: 34.7, Imp:  9.80, Voc: 42.0, Isc: 10.36 },
-  { modelo: "JAM72S30-545/MR",     fabricante: "JA Solar",       tipo: "Monocristalino", Vnom: 24, Pmax: 545, Vmp: 41.4, Imp: 13.16, Voc: 49.6, Isc: 13.98 },
-  { modelo: "JAP60S03-300/SC",     fabricante: "JA Solar",       tipo: "Policristalino",  Vnom: 24, Pmax: 300, Vmp: 32.6, Imp:  9.20, Voc: 40.5, Isc:  9.72 },
-  { modelo: "JKM400M-54HL4",       fabricante: "Jinko Solar",    tipo: "Monocristalino", Vnom: 24, Pmax: 400, Vmp: 37.3, Imp: 10.72, Voc: 45.5, Isc: 11.32 },
-  { modelo: "JKM450M-60H",         fabricante: "Jinko Solar",    tipo: "Monocristalino", Vnom: 24, Pmax: 450, Vmp: 42.0, Imp: 10.71, Voc: 50.2, Isc: 11.27 },
-  { modelo: "LR4-60HPH-360M",      fabricante: "LONGi",          tipo: "Monocristalino", Vnom: 24, Pmax: 360, Vmp: 34.9, Imp: 10.32, Voc: 41.9, Isc: 10.93 },
-  { modelo: "LR5-72HPH-540M",      fabricante: "LONGi",          tipo: "Monocristalino", Vnom: 24, Pmax: 540, Vmp: 41.9, Imp: 12.89, Voc: 50.4, Isc: 13.64 },
-  { modelo: "RSM156-6-400M",       fabricante: "Risen Energy",   tipo: "Monocristalino", Vnom: 24, Pmax: 400, Vmp: 35.1, Imp: 11.38, Voc: 42.8, Isc: 12.17 },
-  { modelo: "TSM-375DD14M(II)",    fabricante: "Trina Solar",    tipo: "Monocristalino", Vnom: 24, Pmax: 375, Vmp: 37.1, Imp: 10.11, Voc: 45.6, Isc: 10.75 },
-  { modelo: "TSM-DE09.08-445W",    fabricante: "Trina Solar",    tipo: "Monocristalino", Vnom: 24, Pmax: 445, Vmp: 40.4, Imp: 11.01, Voc: 48.6, Isc: 11.63 },
-  { modelo: "TSM-270PD05",         fabricante: "Trina Solar",    tipo: "Policristalino",  Vnom: 24, Pmax: 270, Vmp: 31.7, Imp:  8.52, Voc: 38.9, Isc:  9.08 },
-  { modelo: "SRP-430-BMA",         fabricante: "Silfab Solar",   tipo: "Monocristalino", Vnom: 24, Pmax: 430, Vmp: 40.6, Imp: 10.59, Voc: 48.8, Isc: 11.20 },
-  { modelo: "PM060MB4-300",        fabricante: "Astronergy",     tipo: "Monocristalino", Vnom: 24, Pmax: 300, Vmp: 32.5, Imp:  9.24, Voc: 39.8, Isc:  9.81 },
+  { modelo: "Himalaya G10 Series HUASUN",          fabricante: "HUASUN",     tipo: "Monocristalino", Vnom: 24, Pmax: 555, Vmp: 43.91, Imp: 12.64, Voc: 53.04, Isc: 13.06 },
+  { modelo: "5BB PERC DV BIFACIAL-IUSASOL-PV-04 290", fabricante: "IUSASOL", tipo: "Monocristalino", Vnom: 12, Pmax: 290, Vmp: 32.2,  Imp:  9.03, Voc: 39.4,  Isc:  9.51 },
+  { modelo: "5BB PERC DV BIFACIAL-IUSASOL-PV-04 300", fabricante: "IUSASOL", tipo: "Monocristalino", Vnom: 12, Pmax: 300, Vmp: 33.0,  Imp:  9.12, Voc: 39.8,  Isc:  9.61 },
+  { modelo: "JA-M66D46-710/LB",                   fabricante: "JA Solar",   tipo: "Monocristalino", Vnom: 24, Pmax: 720, Vmp: 41.19, Imp: 17.48, Voc: 49.0,  Isc: 18.59 },
+  { modelo: "Half-Cut Solar Module ERASOLAR",      fabricante: "ERASOLAR",   tipo: "Monocristalino", Vnom: 24, Pmax: 450, Vmp: 41.5,  Imp: 10.85, Voc: 49.3,  Isc: 11.60 },
+  { modelo: "Blue Solar SPP041151202",             fabricante: "Blue Solar", tipo: "Policristalino",  Vnom: 12, Pmax: 115, Vmp: 18.9,  Imp:  6.08, Voc: 22.73, Isc:  6.56 },
+  { modelo: "Blue Solar SPP043302402",             fabricante: "Blue Solar", tipo: "Policristalino",  Vnom: 24, Pmax: 330, Vmp: 37.3,  Imp:  8.86, Voc: 44.72, Isc:  9.57 },
+  { modelo: "POWEST Policristalino",               fabricante: "POWEST",     tipo: "Policristalino",  Vnom: 12, Pmax:  50, Vmp: 18.7,  Imp:  2.68, Voc: 22.5,  Isc:  2.86 },
 ];
 
 // ── Catálogo de Baterías ─────────────────────────────────────

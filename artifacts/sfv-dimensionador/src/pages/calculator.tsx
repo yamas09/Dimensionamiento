@@ -523,7 +523,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                               }}
                             >
                               <option value="" disabled>Selecciona un modelo...</option>
-                              {["Canadian Solar", "JA Solar", "Jinko Solar", "LONGi", "Risen Energy", "Trina Solar", "Silfab Solar", "Astronergy"].map(fab => (
+                              {Array.from(new Set(CATALOGO_PANELES.map(p => p.fabricante))).map(fab => (
                                 <optgroup key={fab} label={fab}>
                                   {CATALOGO_PANELES.filter(p => p.fabricante === fab).map(p => (
                                     <option key={p.modelo} value={`${p.fabricante} ${p.modelo}`}>

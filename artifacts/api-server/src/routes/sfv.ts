@@ -136,7 +136,8 @@ function calcularCapacidadBaterias(
   energiaKwh: number, tipo: string, diasAutonomia: number, voltajeSistema: number
 ): { capacidadAh: number; dod: number } {
   const dod = DOD_POR_TIPO[tipo] ?? 0.7;
-  const capacidadAh = Math.ceil((1.2 * energiaKwh * 1000 * diasAutonomia) / (voltajeSistema * dod));
+  const eficiencia = 0.8075; // eficiencia del banco (Python: electrico.calcular_capacidad_baterias)
+  const capacidadAh = Math.ceil((1.2 * energiaKwh * 1000 * diasAutonomia) / (voltajeSistema * eficiencia));
   return { capacidadAh, dod };
 }
 
@@ -152,8 +153,9 @@ function seleccionarBateria(
 function calcularBateriasSerie(voltajeSistema: number, voltajeBateria: number): number {
   return Math.ceil(voltajeSistema / voltajeBateria);
 }
-function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number): number {
-  return Math.ceil(capacidadNominalAh / capacidadComercialAh);
+// calcular_baterias_paralelo: Np = ceil((Cn_Ah * Daut) / (C_bateria * DoD))
+function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number, diasAutonomia: number, dod: number): number {
+  return Math.ceil((capacidadNominalAh * diasAutonomia) / (capacidadComercialAh * dod));
 }
 
 // ── Inversor / Regulador / Cableado ──
@@ -493,7 +495,7 @@ router.post("/calcular", (req, res) => {
     }
     voltajeBateria = vBat;
     const bateriasSerie = calcularBateriasSerie(voltajeSistema, vBat);
-    const bateriasParalelo = calcularBateriasParalelo(capacidadAh, capacidadComercial);
+    const bateriasParalelo = calcularBateriasParalelo(capacidadAh, capacidadComercial, data.diasAutonomia, dod);
     bateriasResult = { totalBaterias: bateriasSerie * bateriasParalelo, bateriasSerie, bateriasParalelo, capacidadNominal: capacidadAh, capacidadComercial, voltajeBateria: vBat, dod };
   }
 
