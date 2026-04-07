@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
 import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets } from "lucide-react";
 import { SolarPanelIcon } from "@/components/icons";
-import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO, CATALOGO_PANELES } from "@/lib/constants";
+import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO, CATALOGO_PANELES, PanelModelo } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -176,6 +176,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const tipoBateria = watch("tipoBateria");
   const bateriaSeleccionMetodo = watch("bateriaSeleccionMetodo");
   const panelSeleccionMetodo = watch("panelSeleccionMetodo");
+  const [panelCatalogo, setPanelCatalogo] = useState<PanelModelo | null>(null);
 
   // Step 5 (Baterías) solo aparece para aislado; step 6 (Rentabilidad) siempre
   const visibleSteps = STEPS
@@ -507,9 +508,10 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                           <FormField label="Modelo de panel">
                             <select
                               className="input-field"
-                              defaultValue=""
+                              value={panelCatalogo ? `${panelCatalogo.fabricante} ${panelCatalogo.modelo}` : ""}
                               onChange={e => {
-                                const panel = CATALOGO_PANELES.find(p => `${p.fabricante} ${p.modelo}` === e.target.value);
+                                const panel = CATALOGO_PANELES.find(p => `${p.fabricante} ${p.modelo}` === e.target.value) ?? null;
+                                setPanelCatalogo(panel);
                                 if (panel) {
                                   setValue("panelVnom",     panel.Vnom);
                                   setValue("panelPotencia", panel.Pmax);
@@ -525,7 +527,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                                 <optgroup key={fab} label={fab}>
                                   {CATALOGO_PANELES.filter(p => p.fabricante === fab).map(p => (
                                     <option key={p.modelo} value={`${p.fabricante} ${p.modelo}`}>
-                                      {p.modelo} — {p.Pmax} W
+                                      {p.modelo} — {p.Pmax} W · {p.tipo === "Monocristalino" ? "Mono" : "Poli"}
                                     </option>
                                   ))}
                                 </optgroup>
@@ -533,25 +535,49 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                             </select>
                           </FormField>
 
-                          {/* Previsualización de parámetros seleccionados */}
-                          {watch("panelPotencia") && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {/* Parámetros eléctricos — siempre visibles */}
+                          <div className="rounded-2xl border border-orange-200 bg-orange-50/60 overflow-hidden">
+                            {/* Cabecera con tipo de panel */}
+                            <div className="flex items-center justify-between px-4 py-2.5 border-b border-orange-200 bg-orange-100/60">
+                              <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Parámetros eléctricos (STC)</p>
+                              {panelCatalogo ? (
+                                <span className={cn(
+                                  "text-xs font-bold px-2.5 py-0.5 rounded-full border",
+                                  panelCatalogo.tipo === "Monocristalino"
+                                    ? "bg-blue-100 text-blue-700 border-blue-200"
+                                    : "bg-amber-100 text-amber-700 border-amber-200"
+                                )}>
+                                  {panelCatalogo.tipo}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">— selecciona un modelo —</span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 sm:grid-cols-6 divide-x divide-orange-200">
                               {[
-                                { label: "Vnom", value: watch("panelVnom"),     unit: "V" },
-                                { label: "Pmax", value: watch("panelPotencia"), unit: "W" },
-                                { label: "Vmp",  value: watch("panelVmp"),      unit: "V" },
-                                { label: "Imp",  value: watch("panelImp"),      unit: "A" },
-                                { label: "Voc",  value: watch("panelVoc"),      unit: "V" },
-                                { label: "Isc",  value: watch("panelIsc"),      unit: "A" },
-                              ].map(p => (
-                                <div key={p.label} className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
-                                  <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide">{p.label}</p>
-                                  <p className="text-lg font-bold text-foreground mt-0.5">{p.value}</p>
-                                  <p className="text-xs text-muted-foreground">{p.unit}</p>
+                                { label: "Vnom", value: panelCatalogo?.Vnom,     unit: "V" },
+                                { label: "Pmax", value: panelCatalogo?.Pmax,     unit: "W" },
+                                { label: "Vmp",  value: panelCatalogo?.Vmp,      unit: "V" },
+                                { label: "Imp",  value: panelCatalogo?.Imp,      unit: "A" },
+                                { label: "Voc",  value: panelCatalogo?.Voc,      unit: "V" },
+                                { label: "Isc",  value: panelCatalogo?.Isc,      unit: "A" },
+                              ].map((p, idx) => (
+                                <div key={p.label} className={cn(
+                                  "flex flex-col items-center py-3 px-1 text-center",
+                                  idx >= 3 ? "border-t border-orange-200 sm:border-t-0" : ""
+                                )}>
+                                  <p className="text-[11px] font-bold text-orange-500 uppercase tracking-wide">{p.label}</p>
+                                  <p className={cn(
+                                    "text-base font-bold mt-0.5 tabular-nums",
+                                    panelCatalogo ? "text-foreground" : "text-muted-foreground"
+                                  )}>
+                                    {p.value != null ? p.value : "—"}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground">{p.unit}</p>
                                 </div>
                               ))}
                             </div>
-                          )}
+                          </div>
                         </div>
                       )}
 
