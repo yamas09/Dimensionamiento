@@ -153,9 +153,10 @@ function seleccionarBateria(
 function calcularBateriasSerie(voltajeSistema: number, voltajeBateria: number): number {
   return Math.ceil(voltajeSistema / voltajeBateria);
 }
-// calcular_baterias_paralelo: Np = ceil((Cn_Ah * Daut) / (C_bateria * DoD))
-function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number, diasAutonomia: number, dod: number): number {
-  return Math.ceil((capacidadNominalAh * diasAutonomia) / (capacidadComercialAh * dod));
+// calcular_baterias_paralelo: Np = ceil(Cn_Ah / (C_bateria * DoD))
+// Cn_Ah ya incluye Daut en el numerador, por lo que no se multiplica de nuevo.
+function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number, dod: number): number {
+  return Math.ceil(capacidadNominalAh / (capacidadComercialAh * dod));
 }
 
 // ── Inversor / Regulador / Cableado ──
@@ -495,7 +496,7 @@ router.post("/calcular", (req, res) => {
     }
     voltajeBateria = vBat;
     const bateriasSerie = calcularBateriasSerie(voltajeSistema, vBat);
-    const bateriasParalelo = calcularBateriasParalelo(capacidadAh, capacidadComercial, data.diasAutonomia, dod);
+    const bateriasParalelo = calcularBateriasParalelo(capacidadAh, capacidadComercial, dod);
     bateriasResult = { totalBaterias: bateriasSerie * bateriasParalelo, bateriasSerie, bateriasParalelo, capacidadNominal: capacidadAh, capacidadComercial, voltajeBateria: vBat, dod };
   }
 
