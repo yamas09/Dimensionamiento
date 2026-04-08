@@ -133,11 +133,12 @@ const CATALOGO_BATERIAS: Record<string, Array<{ modelo: string; Ah: number; V: n
 };
 
 function calcularCapacidadBaterias(
-  energiaKwh: number, tipo: string, diasAutonomia: number, voltajeSistema: number
+  energiaKwh: number, tipo: string, voltajeSistema: number
 ): { capacidadAh: number; dod: number } {
   const dod = DOD_POR_TIPO[tipo] ?? 0.7;
-  const eficiencia = 0.8075; // eficiencia del banco (Python: electrico.calcular_capacidad_baterias)
-  const capacidadAh = Math.ceil((1.2 * energiaKwh * 1000 * diasAutonomia) / (voltajeSistema * eficiencia));
+  const eficiencia = 0.8075;
+  // Python: Cn_Ah = (1.2 * energia_diaria * 1000) / (Vnom_sistema * eficiencia)  — SIN Daut
+  const capacidadAh = Math.ceil((1.2 * energiaKwh * 1000) / (voltajeSistema * eficiencia));
   return { capacidadAh, dod };
 }
 
@@ -153,10 +154,10 @@ function seleccionarBateria(
 function calcularBateriasSerie(voltajeSistema: number, voltajeBateria: number): number {
   return Math.ceil(voltajeSistema / voltajeBateria);
 }
-// calcular_baterias_paralelo: Np = ceil(Cn_Ah / (C_bateria * DoD))
-// Cn_Ah ya incluye Daut en el numerador, por lo que no se multiplica de nuevo.
-function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number, dod: number): number {
-  return Math.ceil(capacidadNominalAh / (capacidadComercialAh * dod));
+// Python: calcular_baterias_paralelo: Np = ceil((Cn_Ah * Daut) / (C_bateria * DoD))
+// Cn_Ah es capacidad diaria (sin Daut), Daut se aplica aquí.
+function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number, diasAutonomia: number, dod: number): number {
+  return Math.ceil((capacidadNominalAh * diasAutonomia) / (capacidadComercialAh * dod));
 }
 
 // ── Inversor / Regulador / Cableado ──
@@ -479,7 +480,7 @@ router.post("/calcular", (req, res) => {
       res.status(400).json({ error: "Se requieren tipo de batería y días de autonomía para sistema aislado." });
       return;
     }
-    const { capacidadAh, dod } = calcularCapacidadBaterias(energiaKwh, data.tipoBateria, data.diasAutonomia, voltajeSistema);
+    const { capacidadAh, dod } = calcularCapacidadBaterias(energiaKwh, data.tipoBateria, voltajeSistema);
     let capacidadComercial: number;
     let vBat: number;
     if (data.bateriaAh && data.bateriaV) {
@@ -496,7 +497,7 @@ router.post("/calcular", (req, res) => {
     }
     voltajeBateria = vBat;
     const bateriasSerie = calcularBateriasSerie(voltajeSistema, vBat);
-    const bateriasParalelo = calcularBateriasParalelo(capacidadAh, capacidadComercial, dod);
+    const bateriasParalelo = calcularBateriasParalelo(capacidadAh, capacidadComercial, data.diasAutonomia, dod);
     bateriasResult = { totalBaterias: bateriasSerie * bateriasParalelo, bateriasSerie, bateriasParalelo, capacidadNominal: capacidadAh, capacidadComercial, voltajeBateria: vBat, dod };
   }
 
