@@ -1,0 +1,71 @@
+#=================CALCULO DE BATERIAS===================
+
+CATALOGO_BATERIAS = {
+    "Plomo": [
+        {"modelo":"Plomo 100Ah 12V","Ah":100,"V":12},
+        {"modelo":"Plomo 150Ah 12V","Ah":150,"V":12},
+        {"modelo":"Plomo 200Ah 12V","Ah":200,"V":12},
+        {"modelo":"Plomo 250Ah 12V","Ah":250, "V":12}
+    ],
+    "Litio": [
+        {"modelo":"Litio 50Ah 48V","Ah":50,"V":48},
+        {"modelo":"Litio 100Ah 12V","Ah":100,"V":12},
+        {"modelo":"Litio 100Ah 24V","Ah":100,"V":24},
+        {"modelo":"Litio 100Ah 48V","Ah":100,"V":48},
+        {"modelo":"Litio 150Ah 12V","Ah":150,"V":12},
+        {"modelo":"Litio 150Ah 24V","Ah":150,"V":24},
+        {"modelo":"Litio 200Ah 12V","Ah":200,"V":12}
+    ]
+}
+
+
+def seleccionar_bateria(tipo, Vnom_sistema, Cn_Ah):
+    
+    opcion = input("\nSeleccione método de selección de batería:" \
+    "\n1) Catálogo" \
+    "\n2) Ingreso manual" \
+    "\nSelección: ")
+
+    if opcion == "1":
+        if tipo not in CATALOGO_BATERIAS:
+            raise ValueError("Tipo de batería no disponible")
+
+        lista = CATALOGO_BATERIAS[tipo]
+
+        print("\nOpciones disponibles:")
+        for i, bat in enumerate(lista):
+            print(f"{i+1}) {bat['modelo']} ({bat['Vnom']}V - {bat['C']}Ah)")
+
+        seleccion = int(input("Seleccione opción: ")) - 1
+        bateria = lista[seleccion]
+
+        Vn_bateria = bateria["Vnom"]
+        C_bateria = bateria["C"]
+
+    elif opcion == "2":
+        Vn_bateria = float(input("Ingrese voltaje nominal de la batería [V]: "))
+        C_bateria = float(input("Ingrese capacidad de la batería [Ah]: "))
+
+    else:
+        raise ValueError("Opción inválida")
+
+    # Validació para evitar error
+    if Vnom_sistema % Vn_bateria != 0:
+        raise ValueError("El voltaje de la batería no es compatible con el sistema")
+
+    return C_bateria, Vn_bateria
+
+
+def calcular_capacidad_baterias(energia_diaria, Vnom_sistema,Daut,DoD):
+    eficiencia = 0.8075  # 80.75%
+    Cn_Ah = (1.2 * energia_diaria * 1000 *Daut) / (Vnom_sistema * eficiencia*DoD)
+    return math.ceil(Cn_Ah)
+
+
+def calcular_baterias_serie(Vnom_sistema, Vn_bateria):
+    return math.ceil(Vnom_sistema / Vn_bateria)
+
+def calcular_baterias_paralelo(Cn_Ah, C_bateria):    
+    Np = Cn_Ah/C_bateria
+    return math.ceil(Np)
+

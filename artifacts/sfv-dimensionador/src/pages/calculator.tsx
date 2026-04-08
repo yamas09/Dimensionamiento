@@ -837,10 +837,10 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
   // --- Voltaje del sistema (misma lógica que el backend y Python) ---
   const voltajeSistema: number = energiaEstimada < 2 ? 12 : energiaEstimada < 4.5 ? 24 : 48;
 
-  // --- Capacidad nominal diaria requerida (Cn_Ah) — Python: sin Daut, con eficiencia=0.8075 ---
+  // --- Capacidad nominal requerida (Cn_Ah) — Python: Cn = (1.2*E*1000*Daut)/(V*eff*DoD) ---
   const dod = tipoBateria ? (DOD_POR_TIPO[tipoBateria] ?? 0.7) : 0.7;
-  const cnAh = (energiaEstimada > 0 && voltajeSistema)
-    ? Math.ceil((1.2 * energiaEstimada * 1000) / (voltajeSistema * 0.8075))
+  const cnAh = (energiaEstimada > 0 && diasAutonomia && voltajeSistema)
+    ? Math.ceil((1.2 * energiaEstimada * 1000 * diasAutonomia) / (voltajeSistema * 0.8075 * dod))
     : null;
 
   // Compatibilidad de la batería manual
@@ -872,7 +872,7 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
             <div className="flex-1 flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
               <Info className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Capacidad diaria (Cn)</p>
+                <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Capacidad del banco (Cn)</p>
                 <p className="text-lg font-bold text-orange-800">{cnAh} Ah</p>
                 <p className="text-xs text-orange-600 mt-0.5">Eficiencia batería-inversor=80.75%</p>
               </div>
