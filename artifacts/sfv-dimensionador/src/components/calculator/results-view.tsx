@@ -355,7 +355,7 @@ export function ResultsView({ data, onReset }: ResultsViewProps) {
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 shrink-0 text-orange-100 mt-0.5" />
                 <p className="text-sm text-orange-50">
-                  Al cabo de 25 años, evitarás la emisión de <strong>{data.ambiental.ahorroCo2TotalTon.toFixed(1)} toneladas</strong> de CO₂, equivalente a plantar cientos de árboles.
+                  Al cabo de 25 años, evitarás la emisión de <strong>{data.ambiental.ahorroCo2TotalTon.toFixed(1)} toneladas</strong> de CO₂, equivalente a plantar entre <strong>{Math.round(data.ambiental.ahorroCo2TotalTon * 1000 / 25)}</strong> y <strong>{Math.round(data.ambiental.ahorroCo2TotalTon * 1000 / 20)}</strong> árboles (20–25 kg CO₂ absorbido por árbol al año).
                 </p>
               </div>
             </div>
