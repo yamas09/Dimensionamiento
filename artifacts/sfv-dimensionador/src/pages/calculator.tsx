@@ -874,7 +874,7 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
               <div>
                 <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Capacidad diaria (Cn)</p>
                 <p className="text-lg font-bold text-orange-800">{cnAh} Ah</p>
-                <p className="text-xs text-orange-600 mt-0.5">η = 80.75% · DoD y Daut se aplican en el banco</p>
+                <p className="text-xs text-orange-600 mt-0.5">Eficiencia batería-inversor=80.75%</p>
               </div>
             </div>
           )}
