@@ -152,12 +152,11 @@ function seleccionarBateria(
 }
 
 function calcularBateriasSerie(voltajeSistema: number, voltajeBateria: number): number {
-  return Math.ceil(voltajeSistema / voltajeBateria);
+  return Math.round(voltajeSistema / voltajeBateria);
 }
-// Python: calcular_baterias_paralelo: Np = ceil(Cn_Ah / C_bateria)
-// Cn_Ah ya incluye Daut y DoD en su fórmula de capacidad.
+// Python: calcular_baterias_paralelo: Np = round(Cn_Ah / C_bateria)
 function calcularBateriasParalelo(capacidadNominalAh: number, capacidadComercialAh: number): number {
-  return Math.ceil(capacidadNominalAh / capacidadComercialAh);
+  return Math.round(capacidadNominalAh / capacidadComercialAh);
 }
 
 // ── Inversor / Regulador / Cableado ──
