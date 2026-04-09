@@ -12,6 +12,112 @@ function section(title: string, rows: string) {
     </div>`;
 }
 
+function svgBarChart(
+  values: number[],
+  color: string,
+  unit: string,
+  title: string
+): string {
+  const W = 520, H = 155, PL = 54, PR = 12, PT = 14, PB = 26;
+  const max = Math.max(...values, 0.001);
+  const n = values.length;
+  const barW = (W - PL - PR) / n;
+  const scaleY = (H - PT - PB) / max;
+
+  const bars = values.map((v, i) => {
+    const x = (PL + i * barW + 1.5).toFixed(1);
+    const bh = Math.max(v * scaleY, 0).toFixed(1);
+    const y = (H - PB - parseFloat(bh)).toFixed(1);
+    return `<rect x="${x}" y="${y}" width="${Math.max(barW - 3, 1).toFixed(1)}" height="${bh}" fill="${color}" rx="2"/>`;
+  }).join("");
+
+  const yLabels = [0, 0.5, 1].map(f => {
+    const val = max * f;
+    const lbl = val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0);
+    const y = (H - PB - f * (H - PT - PB)).toFixed(1);
+    return `<text x="${(PL - 4).toFixed(1)}" y="${y}" dominant-baseline="middle" text-anchor="end" font-size="9" fill="#64748b">${lbl}</text>`;
+  }).join("");
+
+  const xLabels = values.map((_, i) => {
+    if ((i + 1) % 5 !== 0) return "";
+    const x = (PL + (i + 0.5) * barW).toFixed(1);
+    return `<text x="${x}" y="${(H - PB + 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#64748b">${i + 1}</text>`;
+  }).join("");
+
+  return `
+    <div style="margin-top:20px">
+      <p style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${title} — ${unit}</p>
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+        <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H - PB}" stroke="#e2e8f0" stroke-width="1"/>
+        <line x1="${PL}" y1="${H - PB}" x2="${W - PR}" y2="${H - PB}" stroke="#e2e8f0" stroke-width="1"/>
+        ${yLabels}${bars}${xLabels}
+        <text x="${(W / 2).toFixed(0)}" y="${H}" text-anchor="middle" font-size="8" fill="#94a3b8">Año</text>
+      </svg>
+    </div>`;
+}
+
+function svgLineChart(
+  values: number[],
+  color: string,
+  unit: string,
+  title: string,
+  refY?: number | null,
+  refLabel?: string
+): string {
+  const W = 520, H = 155, PL = 58, PR = 16, PT = 14, PB = 26;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const n = values.length;
+  const stepX = (W - PL - PR) / Math.max(n - 1, 1);
+
+  const toX = (i: number) => PL + i * stepX;
+  const toY = (v: number) => H - PB - ((v - min) / range) * (H - PT - PB);
+
+  const points = values.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(" ");
+  const areaPoints = [
+    `${toX(0).toFixed(1)},${(H - PB).toFixed(1)}`,
+    ...values.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`),
+    `${toX(n - 1).toFixed(1)},${(H - PB).toFixed(1)}`,
+  ].join(" ");
+
+  const yLabels = [0, 0.5, 1].map(f => {
+    const val = min + range * f;
+    const lbl = Math.abs(val) >= 10000 ? `${(val / 1000).toFixed(0)}k` :
+                Math.abs(val) >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toFixed(0);
+    return `<text x="${(PL - 4).toFixed(1)}" y="${toY(val).toFixed(1)}" dominant-baseline="middle" text-anchor="end" font-size="9" fill="#64748b">${lbl}</text>`;
+  }).join("");
+
+  const xLabels = values.map((_, i) => {
+    if ((i + 1) % 5 !== 0 && i !== n - 1) return "";
+    return `<text x="${toX(i).toFixed(1)}" y="${(H - PB + 14).toFixed(1)}" text-anchor="middle" font-size="9" fill="#64748b">${i + 1}</text>`;
+  }).join("");
+
+  let refLine = "";
+  if (refY !== null && refY !== undefined && min <= refY && refY <= max) {
+    const ry = toY(refY).toFixed(1);
+    refLine = `<line x1="${PL}" y1="${ry}" x2="${W - PR}" y2="${ry}" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    if (refLabel) {
+      refLine += `<text x="${(PL + 4).toFixed(1)}" y="${(parseFloat(ry) - 3).toFixed(1)}" font-size="8" fill="#7c3aed">${refLabel}</text>`;
+    }
+  }
+
+  return `
+    <div style="margin-top:20px">
+      <p style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">${title} — ${unit}</p>
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+        <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H - PB}" stroke="#e2e8f0" stroke-width="1"/>
+        <line x1="${PL}" y1="${H - PB}" x2="${W - PR}" y2="${H - PB}" stroke="#e2e8f0" stroke-width="1"/>
+        ${refLine}
+        ${yLabels}
+        <polygon points="${areaPoints}" fill="${color}" opacity="0.08"/>
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${xLabels}
+        <text x="${(W / 2).toFixed(0)}" y="${H}" text-anchor="middle" font-size="8" fill="#94a3b8">Año</text>
+      </svg>
+    </div>`;
+}
+
 export function generatePDF(data: SFVResultado) {
   const now = new Date().toLocaleDateString("es-MX", {
     year: "numeric", month: "long", day: "numeric",
@@ -20,6 +126,7 @@ export function generatePDF(data: SFVResultado) {
   const paneles = data.paneles;
   const baterias = data.baterias;
   const ambiental = data.ambiental;
+  const eco = data.economico;
 
   const panelesRows = [
     row("Total de paneles", paneles.totalPaneles),
@@ -34,7 +141,7 @@ export function generatePDF(data: SFVResultado) {
     row("Baterías en serie", baterias.bateriasSerie),
     row("Baterías en paralelo", baterias.bateriasParalelo),
     row("Voltaje de batería", `${baterias.voltajeBateria} V`),
-    row("Capacidad nominal (Cn)", `${baterias.capacidadNominal.toFixed(2)} Ah`),
+    row("Capacidad del banco (Cn)", `${baterias.capacidadNominal.toFixed(2)} Ah`),
     row("Profundidad de descarga (DoD)", `${(baterias.dod * 100).toFixed(0)}%`),
   ].join("") : "";
 
@@ -55,9 +162,40 @@ export function generatePDF(data: SFVResultado) {
     row("Ahorro CO₂ total (25 años)", `${ambiental.ahorroCo2TotalTon.toFixed(3)} Ton CO₂`),
   ].join("");
 
+  const economicoRows = eco ? [
+    row("Inversión total del sistema", `$${eco.costoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`),
+    row("Precio electricidad", `$${eco.precioKwh.toFixed(4)} / kWh`),
+    row("Ahorro estimado (1er año)", `$${eco.ahorroPrimerAnio.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`),
+    row("Ahorro total (25 años)", `$${eco.ahorroTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`),
+    row("Período de recuperación (payback)", eco.payback !== null ? `${eco.payback} años` : "No se recupera en la vida útil"),
+  ].join("") : "";
+
   const co2Table = ambiental.vectorAhorrosCo2.slice(0, 10).map((val, i) =>
     `<tr><td class="label">Año ${i + 1}</td><td class="value">${val.toFixed(2)} kg CO₂</td><td class="value">${ambiental.vectorDegradacion[i].toFixed(2)} kWh</td></tr>`
   ).join("");
+
+  const chartCo2 = svgBarChart(
+    ambiental.vectorAhorrosCo2,
+    "#16a34a",
+    "kg CO₂",
+    "Ahorro CO₂ por año"
+  );
+
+  const chartEnergia = svgLineChart(
+    ambiental.vectorDegradacion,
+    "#0ea5e9",
+    "kWh",
+    "Energía generada con degradación"
+  );
+
+  const chartFlujo = eco ? svgLineChart(
+    eco.flujoCaja,
+    "#f97316",
+    "MXN",
+    "Flujo de caja acumulado",
+    0,
+    "Punto de equilibrio"
+  ) : "";
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -142,6 +280,10 @@ export function generatePDF(data: SFVResultado) {
       margin-bottom: 28px;
       page-break-inside: avoid;
     }
+    .chart-section {
+      margin-bottom: 32px;
+      page-break-inside: avoid;
+    }
     h2 {
       font-size: 14px;
       font-weight: 800;
@@ -180,6 +322,7 @@ export function generatePDF(data: SFVResultado) {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .cover { padding: 40px 48px 32px; }
       .content { padding: 24px 48px 48px; }
+      .chart-section { page-break-inside: avoid; }
     }
   </style>
 </head>
@@ -209,6 +352,15 @@ export function generatePDF(data: SFVResultado) {
         <div class="card-label">Total baterías</div>
         <div class="card-value">${baterias.totalBaterias}<span class="card-unit">unidades</span></div>
       </div>` : ""}
+      ${eco ? `
+      <div class="summary-card">
+        <div class="card-label">Inversión total</div>
+        <div class="card-value" style="font-size:17px">$${eco.costoTotal.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Payback</div>
+        <div class="card-value">${eco.payback !== null ? eco.payback : "—"}<span class="card-unit">${eco.payback !== null ? "años" : "N/A"}</span></div>
+      </div>` : `
       <div class="summary-card">
         <div class="card-label">Ahorro CO₂ (Año 1)</div>
         <div class="card-value">${ambiental.ahorroCo2PrimerAnio.toFixed(1)}<span class="card-unit">kg CO₂</span></div>
@@ -216,7 +368,7 @@ export function generatePDF(data: SFVResultado) {
       <div class="summary-card">
         <div class="card-label">Ahorro CO₂ (25 Años)</div>
         <div class="card-value">${ambiental.ahorroCo2TotalTon.toFixed(2)}<span class="card-unit">Ton</span></div>
-      </div>
+      </div>`}
     </div>
   </div>
 
@@ -224,7 +376,20 @@ export function generatePDF(data: SFVResultado) {
     ${section("Arreglo Fotovoltaico (Paneles)", panelesRows)}
     ${baterias ? section("Banco de Baterías", bateriasRows) : ""}
     ${section("Componentes Eléctricos", electricosRows)}
-    ${section("Análisis Ambiental (Resumen)", ambientalRows)}
+    ${section("Análisis Ambiental", ambientalRows)}
+    ${eco ? section("Análisis Económico", economicoRows) : ""}
+
+    <div class="chart-section">
+      <h2>Gráficas — Análisis Ambiental</h2>
+      ${chartCo2}
+      ${chartEnergia}
+    </div>
+
+    ${eco ? `
+    <div class="chart-section">
+      <h2>Gráfica — Flujo de Caja Acumulado</h2>
+      ${chartFlujo}
+    </div>` : ""}
 
     <div class="section">
       <h2>Proyección CO₂ y Energía — Primeros 10 Años</h2>
