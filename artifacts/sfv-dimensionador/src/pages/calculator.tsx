@@ -1058,98 +1058,99 @@ function BombeoParamsStep({ register, control, errors, watch, setValue }: any) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <FormField label="Volumen a bombear por día [L]" error={errors.volumenLitros?.message}>
-          <input type="number" step="any" min="1" {...register("volumenLitros")} className="input-field" placeholder="Ej. 5000" />
-        </FormField>
-        <FormField label="Profundidad: nivel agua → suelo [m]" error={errors.alturaDebajo?.message}>
-          <input type="number" step="any" min="0" {...register("alturaDebajo")} className="input-field" placeholder="Ej. 15" />
-        </FormField>
-        <FormField label="Altura: suelo → tanque de almacenamiento [m]" error={errors.alturaEncima?.message}>
-          <input type="number" step="any" min="0" {...register("alturaEncima")} className="input-field" placeholder="Ej. 5" />
-        </FormField>
-      </div>
+      {/* Columnas: inputs izquierda, diagrama derecha */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
 
-      {/* Diagrama de referencia de alturas */}
-      <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
-        <p className="text-xs font-semibold text-blue-700 mb-3 uppercase tracking-wide">Referencia de alturas</p>
-        <svg viewBox="0 0 480 220" xmlns="http://www.w3.org/2000/svg" className="w-full max-w-lg mx-auto">
-          <defs>
-            <pattern id="hatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-              <line x1="0" y1="0" x2="0" y2="8" stroke="#92400E" strokeWidth="1" opacity="0.25"/>
-            </pattern>
-          </defs>
+        {/* Columna izquierda — campos de entrada */}
+        <div className="space-y-5">
+          <FormField label="Volumen a bombear por día [L]" error={errors.volumenLitros?.message}>
+            <input type="number" step="any" min="1" {...register("volumenLitros")} className="input-field" placeholder="Ej. 5000" />
+          </FormField>
+          <FormField label="Profundidad: nivel agua → suelo [m]" error={errors.alturaDebajo?.message}>
+            <input type="number" step="any" min="0" {...register("alturaDebajo")} className="input-field" placeholder="Ej. 15" />
+          </FormField>
+          <FormField label="Altura: suelo → tanque de almacenamiento [m]" error={errors.alturaEncima?.message}>
+            <input type="number" step="any" min="0" {...register("alturaEncima")} className="input-field" placeholder="Ej. 5" />
+          </FormField>
+        </div>
 
-          {/* Underground fill */}
-          <rect x="0" y="132" width="480" height="88" fill="url(#hatch)" rx="0"/>
-          <rect x="0" y="132" width="480" height="88" fill="#D4A96A" opacity="0.18"/>
+        {/* Columna derecha — diagrama de referencia */}
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+          <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Referencia de alturas</p>
+          <svg viewBox="0 0 340 230" xmlns="http://www.w3.org/2000/svg" className="w-full">
+            <defs>
+              <pattern id="hatch2" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="8" stroke="#92400E" strokeWidth="1" opacity="0.3"/>
+              </pattern>
+            </defs>
 
-          {/* Ground line */}
-          <line x1="0" y1="132" x2="480" y2="132" stroke="#92400E" strokeWidth="2"/>
+            {/* Underground fill */}
+            <rect x="0" y="148" width="340" height="82" fill="url(#hatch2)"/>
+            <rect x="0" y="148" width="340" height="82" fill="#D4A96A" opacity="0.15"/>
+            {/* Ground line */}
+            <line x1="0" y1="148" x2="340" y2="148" stroke="#92400E" strokeWidth="2"/>
 
-          {/* Well shaft */}
-          <rect x="198" y="130" width="38" height="78" fill="#E0F2FE" stroke="#0284C7" strokeWidth="1.5" rx="2"/>
-          {/* Water fill in well */}
-          <rect x="199" y="182" width="36" height="25" fill="#38BDF8" opacity="0.55" rx="1"/>
-          {/* Water surface line */}
-          <line x1="199" y1="182" x2="235" y2="182" stroke="#0284C7" strokeWidth="1.5" strokeDasharray="4,2"/>
+            {/* Well shaft */}
+            <rect x="115" y="146" width="34" height="78" fill="#E0F2FE" stroke="#0284C7" strokeWidth="1.5" rx="2"/>
+            {/* Water in well */}
+            <rect x="116" y="196" width="32" height="27" fill="#38BDF8" opacity="0.55" rx="1"/>
+            {/* Water surface dashed line */}
+            <line x1="116" y1="196" x2="149" y2="196" stroke="#0284C7" strokeWidth="1.5" strokeDasharray="4,2"/>
+            {/* Pump */}
+            <rect x="119" y="216" width="26" height="11" fill="#475569" rx="3"/>
+            <circle cx="132" cy="221" r="4" fill="#64748B" stroke="#CBD5E1" strokeWidth="1"/>
 
-          {/* Pump */}
-          <rect x="202" y="202" width="30" height="13" fill="#475569" rx="3"/>
-          <circle cx="217" cy="208" r="4.5" fill="#64748B" stroke="#CBD5E1" strokeWidth="1"/>
+            {/* Pipe: pump → elbow → tank */}
+            <polyline points="143,221 168,221 168,68 240,68" fill="none" stroke="#0284C7" strokeWidth="2.5" strokeLinejoin="round"/>
 
-          {/* Pipe from pump to tank */}
-          <polyline points="228,208 268,208 268,72 322,72" fill="none" stroke="#0284C7" strokeWidth="2.5" strokeLinejoin="round"/>
+            {/* Elevated storage tank */}
+            <rect x="240" y="38" width="82" height="62" fill="#BAE6FD" stroke="#0284C7" strokeWidth="1.5" rx="3"/>
+            {/* Water inside tank */}
+            <rect x="241" y="58" width="80" height="41" fill="#38BDF8" opacity="0.45" rx="2"/>
+            {/* Tank top cap */}
+            <line x1="238" y1="38" x2="324" y2="38" stroke="#0284C7" strokeWidth="2"/>
+            {/* Support legs */}
+            <line x1="252" y1="100" x2="244" y2="148" stroke="#64748B" strokeWidth="2"/>
+            <line x1="310" y1="100" x2="318" y2="148" stroke="#64748B" strokeWidth="2"/>
+            <line x1="252" y1="123" x2="310" y2="123" stroke="#64748B" strokeWidth="1.5"/>
+            <line x1="244" y1="123" x2="318" y2="148" stroke="#94A3B8" strokeWidth="1" strokeDasharray="3,2"/>
 
-          {/* Elevated storage tank */}
-          <rect x="322" y="42" width="78" height="58" fill="#BAE6FD" stroke="#0284C7" strokeWidth="1.5" rx="3"/>
-          {/* Water inside tank */}
-          <rect x="323" y="64" width="76" height="35" fill="#38BDF8" opacity="0.45" rx="2"/>
-          {/* Tank top */}
-          <line x1="320" y1="42" x2="402" y2="42" stroke="#0284C7" strokeWidth="2"/>
-          {/* Support legs */}
-          <line x1="334" y1="100" x2="326" y2="132" stroke="#64748B" strokeWidth="2"/>
-          <line x1="388" y1="100" x2="396" y2="132" stroke="#64748B" strokeWidth="2"/>
-          {/* Cross brace */}
-          <line x1="334" y1="115" x2="388" y2="115" stroke="#64748B" strokeWidth="1.5"/>
-          <line x1="326" y1="115" x2="396" y2="132" stroke="#94A3B8" strokeWidth="1" strokeDasharray="3,2"/>
+            {/* ── PROFUNDIDAD: ground (y=148) → water surface (y=196) ── */}
+            {/* Arrow up at ground */}
+            <polygon points="88,148 84,158 92,158" fill="#DC2626"/>
+            {/* Arrow down at water level */}
+            <polygon points="88,196 84,186 92,186" fill="#DC2626"/>
+            {/* Shaft */}
+            <line x1="88" y1="158" x2="88" y2="186" stroke="#DC2626" strokeWidth="1.5"/>
+            {/* Reference ticks */}
+            <line x1="80" y1="148" x2="113" y2="148" stroke="#DC2626" strokeWidth="1" strokeDasharray="4,2"/>
+            <line x1="80" y1="196" x2="113" y2="196" stroke="#DC2626" strokeWidth="1" strokeDasharray="4,2"/>
+            {/* Label — placed in clear underground region */}
+            <rect x="2" y="158" width="78" height="30" fill="white" opacity="0.75" rx="4"/>
+            <text x="41" y="172" fill="#DC2626" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">Profundidad</text>
+            <text x="41" y="184" fill="#DC2626" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">nivel agua → suelo</text>
 
-          {/* ── alturaDebajo dimension (left of well) ── */}
-          {/* Top arrowhead at ground level (y=132) pointing up */}
-          <polygon points="172,132 168,141 176,141" fill="#DC2626"/>
-          {/* Bottom arrowhead at water level (y=182) pointing down */}
-          <polygon points="172,182 168,173 176,173" fill="#DC2626"/>
-          {/* Dimension line */}
-          <line x1="172" y1="141" x2="172" y2="173" stroke="#DC2626" strokeWidth="1.5"/>
-          {/* Tick at ground */}
-          <line x1="164" y1="132" x2="196" y2="132" stroke="#DC2626" strokeWidth="1" strokeDasharray="4,2"/>
-          {/* Tick at water surface */}
-          <line x1="164" y1="182" x2="197" y2="182" stroke="#DC2626" strokeWidth="1" strokeDasharray="4,2"/>
-          {/* Label */}
-          <text x="90" y="151" fill="#DC2626" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">alturaDebajo</text>
-          <text x="90" y="164" fill="#DC2626" fontSize="9.5" fontFamily="sans-serif" textAnchor="middle" opacity="0.85">nivel agua → suelo</text>
+            {/* ── ALTURA: tank bottom (y=100) → ground (y=148) ── */}
+            {/* Arrow up at tank bottom */}
+            <polygon points="206,100 202,110 210,110" fill="#15803D"/>
+            {/* Arrow down at ground */}
+            <polygon points="206,148 202,138 210,138" fill="#15803D"/>
+            {/* Shaft */}
+            <line x1="206" y1="110" x2="206" y2="138" stroke="#15803D" strokeWidth="1.5"/>
+            {/* Reference ticks */}
+            <line x1="198" y1="100" x2="240" y2="100" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2"/>
+            <line x1="150" y1="148" x2="240" y2="148" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2" opacity="0.5"/>
+            {/* Label — above tank bottom, clear of elements */}
+            <rect x="157" y="62" width="64" height="30" fill="white" opacity="0.85" rx="4"/>
+            <text x="189" y="76" fill="#15803D" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">Altura</text>
+            <text x="189" y="88" fill="#15803D" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">suelo → tanque</text>
 
-          {/* ── alturaEncima dimension (between well and tank) ── */}
-          {/* Top arrowhead at tank bottom (y=100) pointing up */}
-          <polygon points="284,100 280,109 288,109" fill="#15803D"/>
-          {/* Bottom arrowhead at ground (y=132) pointing down */}
-          <polygon points="284,132 280,123 288,123" fill="#15803D"/>
-          {/* Dimension line */}
-          <line x1="284" y1="109" x2="284" y2="123" stroke="#15803D" strokeWidth="1.5"/>
-          {/* Tick at ground */}
-          <line x1="236" y1="132" x2="322" y2="132" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2" opacity="0.5"/>
-          {/* Tick at tank bottom */}
-          <line x1="276" y1="100" x2="322" y2="100" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2"/>
-          {/* Label */}
-          <text x="284" y="88" fill="#15803D" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">alturaEncima</text>
-          <text x="284" y="100" fill="#15803D" fontSize="9.5" fontFamily="sans-serif" textAnchor="middle" opacity="0.85">suelo → tanque</text>
-
-          {/* Component labels */}
-          <text x="217" y="222" fill="#475569" fontSize="9" fontFamily="sans-serif" textAnchor="middle">Bomba</text>
-          <text x="361" y="34" fill="#0369A1" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="600">Tanque</text>
-          <text x="217" y="126" fill="#0369A1" fontSize="9" fontFamily="sans-serif" textAnchor="middle">Pozo</text>
-          <text x="268" y="220" fill="#94A3B8" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">Tubería</text>
-        </svg>
+            {/* Component labels */}
+            <text x="132" y="142" fill="#0369A1" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">Pozo</text>
+            <text x="281" y="30" fill="#0369A1" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="600">Tanque</text>
+            <text x="132" y="228" fill="#64748B" fontSize="8" fontFamily="sans-serif" textAnchor="middle">Bomba</text>
+          </svg>
+        </div>
       </div>
 
       <div>
