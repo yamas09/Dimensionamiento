@@ -386,7 +386,6 @@ router.post("/calcular", (req, res) => {
         ahorrosAcumulados,
         flujoCaja: flujo,
         costoConvencional: parseFloat(costoConvencional.toFixed(2)),
-        costoMantenimiento: costoMant,
       };
     }
 
