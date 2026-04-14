@@ -44,7 +44,7 @@ function App() {
 
             <footer className="mt-8 pb-6 text-center">
               <p className="text-xs text-muted-foreground/50 tracking-wide">
-                Desarrollado en Universidad Autónoma Metropolitana &mdash; Unidad Azcapotzalco por estudiantes de Ing. Eléctrica
+                Desarrollado por Ing. Eléctricas egresadas de la Universidad Autónoma Metropolitana, Unidad Azcapotzalco (2026)
               </p>
             </footer>
           </div>
