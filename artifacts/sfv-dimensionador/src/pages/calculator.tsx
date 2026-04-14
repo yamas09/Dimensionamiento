@@ -713,32 +713,32 @@ function CargasTable({ control, register, errors }: any) {
       </div>
       {errors.cargas?.root && <p className="text-sm text-destructive">{errors.cargas.root.message}</p>}
       
-      <div className="overflow-x-auto rounded-xl border border-border custom-scrollbar">
-        <table className="w-full text-sm text-left">
+      <div className="w-full rounded-xl border border-border overflow-hidden">
+        <table className="w-full table-fixed text-sm text-left">
           <thead className="bg-muted text-muted-foreground uppercase text-xs">
             <tr>
-              <th className="px-4 py-3 font-semibold">Elemento</th>
-              <th className="px-4 py-3 font-semibold w-24">Tipo</th>
-              <th className="px-4 py-3 font-semibold w-24">Cant.</th>
-              <th className="px-4 py-3 font-semibold w-32">Pot. (W)</th>
-              <th className="px-4 py-3 font-semibold w-32">Horas/día</th>
-              <th className="px-4 py-3 w-16"></th>
+              <th className="px-3 py-3 font-semibold w-[34%]">Elemento</th>
+              <th className="px-3 py-3 font-semibold w-[12%]">Tipo</th>
+              <th className="px-3 py-3 font-semibold w-[12%]">Cant.</th>
+              <th className="px-3 py-3 font-semibold w-[20%]">Pot. (W)</th>
+              <th className="px-3 py-3 font-semibold w-[18%]">Horas/día</th>
+              <th className="px-3 py-3 w-[4%]"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {fields.map((field, index) => (
               <tr key={field.id} className="bg-white hover:bg-slate-50 transition-colors">
-                <td className="px-4 py-2"><input {...register(`cargas.${index}.elemento`)} className="input-field-table" placeholder="Ej. Focos" /></td>
-                <td className="px-4 py-2">
+                <td className="px-3 py-2"><input {...register(`cargas.${index}.elemento`)} className="input-field-table w-full min-w-0" placeholder="Ej. Focos" /></td>
+                <td className="px-3 py-2">
                   <select {...register(`cargas.${index}.tipoCarga`)} className="input-field-table cursor-pointer">
                     <option value="AC">AC</option>
                     <option value="DC">DC</option>
                   </select>
                 </td>
-                <td className="px-4 py-2"><input type="number" {...register(`cargas.${index}.cantidad`)} className="input-field-table text-center" /></td>
-                <td className="px-4 py-2"><input type="number" step="any" {...register(`cargas.${index}.potencia`)} className="input-field-table text-right" /></td>
-                <td className="px-4 py-2"><input type="number" step="any" {...register(`cargas.${index}.horas`)} className="input-field-table text-right" /></td>
-                <td className="px-4 py-2 text-center">
+                <td className="px-3 py-2"><input type="number" {...register(`cargas.${index}.cantidad`)} className="input-field-table w-full min-w-0 text-center" /></td>
+                <td className="px-3 py-2"><input type="number" step="any" {...register(`cargas.${index}.potencia`)} className="input-field-table w-full min-w-0 text-right" /></td>
+                <td className="px-3 py-2"><input type="number" step="any" {...register(`cargas.${index}.horas`)} className="input-field-table w-full min-w-0 text-right" /></td>
+                <td className="px-3 py-2 text-center">
                   <button type="button" onClick={() => remove(index)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
