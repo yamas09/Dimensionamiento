@@ -1130,20 +1130,20 @@ function BombeoParamsStep({ register, control, errors, watch, setValue }: any) {
             <text x="41" y="172" fill="#DC2626" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">Profundidad</text>
             <text x="41" y="184" fill="#DC2626" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">nivel agua → suelo</text>
 
-            {/* ── ALTURA: tank bottom (y=100) → ground (y=148) ── */}
-            {/* Arrow up at tank bottom */}
-            <polygon points="206,100 202,110 210,110" fill="#15803D"/>
+            {/* ── ALTURA: pipe level (y=68) → ground (y=148) ── */}
+            {/* Arrow up at pipe level */}
+            <polygon points="206,68 202,78 210,78" fill="#15803D"/>
             {/* Arrow down at ground */}
             <polygon points="206,148 202,138 210,138" fill="#15803D"/>
             {/* Shaft */}
-            <line x1="206" y1="110" x2="206" y2="138" stroke="#15803D" strokeWidth="1.5"/>
+            <line x1="206" y1="78" x2="206" y2="138" stroke="#15803D" strokeWidth="1.5"/>
             {/* Reference ticks */}
-            <line x1="198" y1="100" x2="240" y2="100" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2"/>
+            <line x1="198" y1="68" x2="240" y2="68" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2"/>
             <line x1="150" y1="148" x2="240" y2="148" stroke="#15803D" strokeWidth="1" strokeDasharray="4,2" opacity="0.5"/>
-            {/* Label — above tank bottom, clear of elements */}
-            <rect x="157" y="62" width="64" height="30" fill="white" opacity="0.85" rx="4"/>
-            <text x="189" y="76" fill="#15803D" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">Altura</text>
-            <text x="189" y="88" fill="#15803D" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">suelo → tanque</text>
+            {/* Label — between tank top and pipe, with white background */}
+            <rect x="157" y="40" width="64" height="22" fill="white" opacity="0.88" rx="4"/>
+            <text x="189" y="53" fill="#15803D" fontSize="11" fontFamily="sans-serif" textAnchor="middle" fontWeight="700">Altura</text>
+            <text x="189" y="63" fill="#15803D" fontSize="8" fontFamily="sans-serif" textAnchor="middle">suelo → tanque</text>
 
             {/* Component labels */}
             <text x="132" y="142" fill="#0369A1" fontSize="8.5" fontFamily="sans-serif" textAnchor="middle">Pozo</text>
