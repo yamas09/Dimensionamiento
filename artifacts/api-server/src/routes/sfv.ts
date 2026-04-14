@@ -221,11 +221,6 @@ function ahorroAnual(energiaAnualKwh: number, precioKwh: number): number {
   return parseFloat((energiaAnualKwh * precioKwh).toFixed(2));
 }
 
-// Costo mantenimiento = 2% del costo total del sistema
-function costoMantenimientoAnual(costoTotal: number, porcentaje = 0.02): number {
-  return parseFloat((costoTotal * porcentaje).toFixed(2));
-}
-
 // flujo_caja_acumulado: año 0 = -costoTotal, luego acumula ahorros año a año
 function flujoCajaAcumulado(costoTotal: number, vectorAhorros: number[]): number[] {
   const flujo: number[] = [-parseFloat(costoTotal.toFixed(2))];
@@ -360,8 +355,6 @@ router.post("/calcular", (req, res) => {
         data.costoVariador ?? 0
       );
 
-      const costoMant = costoMantenimientoAnual(costoTotal);
-
       let costoConvencional = 0;
       if (data.tipoCombustible === "electrico" && data.precioKwhConvencional) {
         costoConvencional = energiaAnualKwh * data.precioKwhConvencional;
@@ -369,7 +362,7 @@ router.post("/calcular", (req, res) => {
         costoConvencional = data.consumoDieselAnual * data.precioDieselLitro;
       }
 
-      const ahorroAnualBombeo = parseFloat((costoConvencional - costoMant).toFixed(2));
+      const ahorroAnualBombeo = parseFloat((costoConvencional - costoTotal).toFixed(2));
       const flujo = flujoCajaBombeo(costoTotal, ahorroAnualBombeo);
       // Bombeo: payback simple = costo_total / ahorro_anual (Python: payback())
       const paybackReal = ahorroAnualBombeo > 0
