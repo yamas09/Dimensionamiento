@@ -355,37 +355,46 @@ router.post("/calcular", (req, res) => {
         data.costoVariador ?? 0
       );
 
+      // costoConvencional = costo anual evitado (lo que se deja de pagar)
       let costoConvencional = 0;
+      let precioKwhRef: number | undefined;
       if (data.tipoCombustible === "electrico" && data.precioKwhConvencional) {
-        costoConvencional = energiaAnualKwh * data.precioKwhConvencional;
+        costoConvencional = parseFloat((energiaAnualKwh * data.precioKwhConvencional).toFixed(2));
+        precioKwhRef = data.precioKwhConvencional;
       } else if (data.tipoCombustible === "diesel" && data.consumoDieselAnual && data.precioDieselLitro) {
-        costoConvencional = data.consumoDieselAnual * data.precioDieselLitro;
+        costoConvencional = parseFloat((data.consumoDieselAnual * data.precioDieselLitro).toFixed(2));
       }
 
-      const ahorroAnualBombeo = parseFloat((costoConvencional - costoTotal).toFixed(2));
-      const flujo = flujoCajaBombeo(costoTotal, ahorroAnualBombeo);
-      // Bombeo: payback simple = costo_total / ahorro_anual (Python: payback())
-      const paybackReal = ahorroAnualBombeo > 0
-        ? parseFloat((costoTotal / ahorroAnualBombeo).toFixed(2))
-        : null;
+      // El ahorro del año 1 ES el costo convencional evitado (igual que sistema aislado)
+      const ahorroPrimerAnio = costoConvencional;
 
-      // Construir vectores anuales para la gráfica (años 1..25 del flujo)
-      const vectorAhorros = Array.from({ length: 25 }, (_, i) =>
-        parseFloat((ahorroAnualBombeo * Math.pow(1 - 0.005, i)).toFixed(2))
-      );
+      // Vector de ahorros con degradación 0.5%/año (igual que calcularVectorAhorros en aislado)
+      const vectorAhorros: number[] = [];
       const ahorrosAcumulados: number[] = [];
       let acc = 0;
-      for (const a of vectorAhorros) { acc = parseFloat((acc + a).toFixed(2)); ahorrosAcumulados.push(acc); }
+      for (let n = 0; n < 25; n++) {
+        const ahorro = parseFloat((ahorroPrimerAnio * Math.pow(1 - 0.005, n)).toFixed(2));
+        vectorAhorros.push(ahorro);
+        acc = parseFloat((acc + ahorro).toFixed(2));
+        ahorrosAcumulados.push(acc);
+      }
+
+      // Flujo de caja: año 0 = −costoTotal, luego acumula ahorros (igual que flujoCajaAcumulado)
+      const flujo = flujoCajaAcumulado(costoTotal, vectorAhorros);
+
+      // Payback: primer año donde el flujo acumulado >= 0 (igual que calcularPaybackReal)
+      const paybackReal = calcularPaybackReal(flujo);
 
       economicoResult = {
         costoTotal,
-        ahorroPrimerAnio: ahorroAnualBombeo,
+        ...(precioKwhRef !== undefined ? { precioKwh: precioKwhRef } : {}),
+        ahorroPrimerAnio,
         ahorroTotal: ahorrosAcumulados[24],
         payback: paybackReal,
         vectorAhorros,
         ahorrosAcumulados,
         flujoCaja: flujo,
-        costoConvencional: parseFloat(costoConvencional.toFixed(2)),
+        costoConvencional,
       };
     }
 
