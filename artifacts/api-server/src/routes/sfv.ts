@@ -290,8 +290,10 @@ function calcularVectoresAmbientales(energiaAnualKwh: number): { degradacion: nu
 // ===================================================================
 
 router.post("/calcular", (req, res) => {
+  try {
   const parseResult = CalcularSFVBody.safeParse(req.body);
   if (!parseResult.success) {
+    console.error("[SFV] Validation error:", parseResult.error.message);
     res.status(400).json({ error: parseResult.error.message });
     return;
   }
@@ -609,6 +611,10 @@ router.post("/calcular", (req, res) => {
   };
 
   res.json(resultado);
+  } catch (err: any) {
+    console.error("[SFV] Runtime error:", err?.message ?? err);
+    res.status(500).json({ error: err?.message ?? "Error interno del servidor" });
+  }
 });
 
 export default router;

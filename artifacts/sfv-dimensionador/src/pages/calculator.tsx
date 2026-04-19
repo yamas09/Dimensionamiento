@@ -248,16 +248,26 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
 
   // Calcula solo la parte técnica (sin costos) y muestra el preview en paso 6
   const handleCalcularTecnico = async () => {
-    const data = methods.getValues();
-    // Enviar sin campos económicos (estarán undefined por defecto)
+    // Parsear a través del schema para asegurar que los campos numéricos estén correctamente
+    // convertidos de string a number (los <input type="number"> devuelven strings sin valueAsNumber)
+    const rawData = methods.getValues();
+    const parseResult = sfvSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      console.error("[handleCalcularTecnico] schema error:", parseResult.error.flatten());
+      toast({ title: "Error en datos", description: "Revisa los campos marcados en rojo.", variant: "destructive" });
+      return;
+    }
+    const data = parseResult.data;
     try {
       const response = await calculateMutation.mutateAsync({ data: data as SFVInput });
       setTechnicalResult(response);
       setWantsEconomicAnalysis(null);
       setActiveStep(6);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
-      toast({ title: "Error en cálculo", description: "Ocurrió un error al procesar los datos.", variant: "destructive" });
+    } catch (err: any) {
+      const apiMsg = err?.data?.error ?? err?.message ?? "Ocurrió un error al procesar los datos.";
+      console.error("[handleCalcularTecnico] API error:", err);
+      toast({ title: "Error en cálculo", description: apiMsg, variant: "destructive" });
     }
   };
 
