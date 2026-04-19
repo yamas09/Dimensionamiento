@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
-import { MapPin, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets, BarChart2 } from "lucide-react";
-import { SolarPanelIcon } from "@/components/icons";
+import { MapPin, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets, BarChart2, Sun } from "lucide-react";
+
 import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO, CATALOGO_PANELES, PanelModelo } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
 import { cn } from "@/lib/utils";
@@ -107,7 +107,7 @@ const STEPS = [
   { id: 1, title: "Ubicación",      icon: MapPin },
   { id: 2, title: "Tipo",           icon: Zap },
   { id: 3, title: "Perfil",         icon: Zap },
-  { id: 4, title: "Paneles",        icon: SolarPanelIcon },
+  { id: 4, title: "Paneles",        icon: Sun },
   { id: 5, title: "Baterías",       icon: Battery },
   { id: 6, title: "Resultados",     icon: CheckCircle2 },
   { id: 7, title: "Rentabilidad",   icon: DollarSign },
@@ -1301,7 +1301,7 @@ function TechnicalPreviewStep({ result, tipoSistema, onAddEconomic, onFinish }: 
       </div>
 
       {/* Datos del sistema */}
-      <Section title="Arreglo Fotovoltaico" icon={<SolarPanelIcon className="w-4 h-4 text-amber-500" />}>
+      <Section title="Arreglo Fotovoltaico" icon={<Sun className="w-4 h-4 text-amber-500" />}>
         <Chip label="Paneles totales" value={`${result.paneles.totalPaneles}`} />
         <Chip label="Serie × Paralelo" value={`${result.paneles.panelesSerie} × ${result.paneles.panelesParalelo}`} />
         <Chip label="Voltaje sistema" value={`${result.paneles.voltajeSistema} V`} />
