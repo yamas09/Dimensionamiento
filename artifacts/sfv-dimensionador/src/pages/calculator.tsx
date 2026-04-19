@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCalcularSFV, SFVInput, SFVResultado } from "@workspace/api-client-react";
-import { MapPin, Sun, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets } from "lucide-react";
+import { MapPin, Zap, Battery, ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, Info, DollarSign, Droplets, BarChart2 } from "lucide-react";
 import { SolarPanelIcon } from "@/components/icons";
 import { MEXICAN_STATES_HSP, CATALOGO_BATERIAS, DOD_POR_TIPO, CATALOGO_PANELES, PanelModelo } from "@/lib/constants";
 import { ResultsView } from "@/components/calculator/results-view";
@@ -102,14 +102,15 @@ const sfvSchema = z.object({
 
 type FormData = z.infer<typeof sfvSchema>;
 
-// 1=Ubicación, 2=Tipo, 3=Perfil|Bombeo, 4=Ficha técnica, 5=Baterías(aislado), 6=Rentabilidad
+// 1=Ubicación, 2=Tipo, 3=Perfil|Bombeo, 4=Ficha técnica, 5=Baterías(aislado), 6=Resultados técnicos, 7=Rentabilidad
 const STEPS = [
   { id: 1, title: "Ubicación",      icon: MapPin },
   { id: 2, title: "Tipo",           icon: Zap },
-  { id: 3, title: "Perfil",         icon: Zap },      // title overridden dynamically
-  { id: 4, title: "Ficha técnica",  icon: SolarPanelIcon },
+  { id: 3, title: "Perfil",         icon: Zap },
+  { id: 4, title: "Paneles",        icon: SolarPanelIcon },
   { id: 5, title: "Baterías",       icon: Battery },
-  { id: 6, title: "Rentabilidad",   icon: DollarSign },
+  { id: 6, title: "Resultados",     icon: CheckCircle2 },
+  { id: 7, title: "Rentabilidad",   icon: DollarSign },
 ];
 
 interface CalculatorPageProps {
@@ -119,7 +120,8 @@ interface CalculatorPageProps {
 
 export default function CalculatorPage({ result, setResult }: CalculatorPageProps) {
   const [activeStep, setActiveStep] = useState(1);
-  const [omitirEconomico, setOmitirEconomico] = useState(false);
+  const [technicalResult, setTechnicalResult] = useState<SFVResultado | null>(null);
+  const [wantsEconomicAnalysis, setWantsEconomicAnalysis] = useState<boolean | null>(null);
   const { toast } = useToast();
 
   const calculateMutation = useCalcularSFV();
@@ -178,15 +180,19 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const panelSeleccionMetodo = watch("panelSeleccionMetodo");
   const [panelCatalogo, setPanelCatalogo] = useState<PanelModelo | null>(null);
 
-  // Step 5 (Baterías) solo aparece para aislado; step 6 (Rentabilidad) siempre
+  // Step 5 (Baterías) solo aparece para aislado; step 7 (Rentabilidad) solo si el usuario elige análisis económico
   const visibleSteps = STEPS
-    .filter(s => !(s.id === 5 && tipoSistema !== "aislado"))
+    .filter(s => {
+      if (s.id === 5 && tipoSistema !== "aislado") return false;
+      if (s.id === 7 && wantsEconomicAnalysis !== true) return false;
+      return true;
+    })
     .map(s => s.id === 3
       ? { ...s, title: tipoSistema === "bombeo" ? "Bombeo" : "Perfil" }
       : s
     );
 
-  // Si el usuario cambia el tipo de sistema y está en baterías (5), volver a ficha (4)
+  // Si el usuario cambia el tipo de sistema y está en baterías (5), volver a paneles (4)
   useEffect(() => {
     if (tipoSistema !== "aislado" && activeStep === 5) {
       setActiveStep(4);
@@ -194,13 +200,13 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   }, [tipoSistema]);
 
   const isLastStep = activeStep === visibleSteps[visibleSteps.length - 1].id;
+  const isTechnicalPreviewStep = activeStep === 6;
+  const isEconomicStep = activeStep === 7;
 
   const nextStep = async () => {
     let fieldsToValidate: any[] = [];
     if (activeStep === 1) fieldsToValidate = ["latitud", "longitud", "hsp"];
-    // Paso 2 = Tipo de Sistema: sin validación de campos, solo avanzar
     if (activeStep === 2) fieldsToValidate = [];
-    // Paso 3 = Perfil o Bombeo
     if (activeStep === 3) {
       if (tipoSistema === "bombeo") {
         fieldsToValidate = ["volumenLitros", "alturaDebajo", "alturaEncima"];
@@ -210,32 +216,67 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
         else fieldsToValidate = ["registrosRecibo", "diasPeriodoRecibo"];
       }
     }
-    // Paso 4 = Ficha técnica: valida parámetros del panel
     if (activeStep === 4) fieldsToValidate = ["panelVnom", "panelPotencia", "panelImp", "panelVmp", "panelIsc", "panelVoc"];
-    // Paso 5 = Baterías (solo aislado)
     if (activeStep === 5) fieldsToValidate = ["tipoBateria", "diasAutonomia"];
-    
+
     const isValid = await trigger(fieldsToValidate as any);
-    
-    if (isValid) {
-      const currentIdx = visibleSteps.findIndex(s => s.id === activeStep);
-      if (currentIdx < visibleSteps.length - 1) {
-        setActiveStep(visibleSteps[currentIdx + 1].id);
-      }
-    } else {
+    if (!isValid) {
       toast({ title: "Datos incompletos", description: "Revisa los campos marcados en rojo.", variant: "destructive" });
+      return;
+    }
+
+    const currentIdx = visibleSteps.findIndex(s => s.id === activeStep);
+    const nextStepData = visibleSteps[currentIdx + 1];
+
+    // Si el siguiente paso es el de resultados técnicos (6), disparar la API primero
+    if (nextStepData?.id === 6) {
+      await handleCalcularTecnico();
+      return;
+    }
+
+    if (currentIdx < visibleSteps.length - 1) {
+      setActiveStep(nextStepData.id);
     }
   };
 
   const prevStep = () => {
+    // Desde el paso de rentabilidad (7), volver siempre al preview técnico (6)
+    if (activeStep === 7) { setActiveStep(6); return; }
     const currentIdx = visibleSteps.findIndex(s => s.id === activeStep);
-    if (currentIdx > 0) {
-      setActiveStep(visibleSteps[currentIdx - 1].id);
+    if (currentIdx > 0) setActiveStep(visibleSteps[currentIdx - 1].id);
+  };
+
+  // Calcula solo la parte técnica (sin costos) y muestra el preview en paso 6
+  const handleCalcularTecnico = async () => {
+    const data = methods.getValues();
+    // Enviar sin campos económicos (estarán undefined por defecto)
+    try {
+      const response = await calculateMutation.mutateAsync({ data: data as SFVInput });
+      setTechnicalResult(response);
+      setWantsEconomicAnalysis(null);
+      setActiveStep(6);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      toast({ title: "Error en cálculo", description: "Ocurrió un error al procesar los datos.", variant: "destructive" });
     }
   };
 
+  // Cuando el usuario decide añadir análisis económico
+  const handleAddEconomic = () => {
+    setWantsEconomicAnalysis(true);
+    setActiveStep(7);
+  };
+
+  // Finalizar con solo resultados técnicos
+  const handleFinalizarSinEconomia = () => {
+    if (technicalResult) {
+      setResult(technicalResult);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Calcular con costos (paso 7)
   const handleCalcular = async () => {
-    // Valida los campos económicos del paso 6 antes de enviar
     const econFields: string[] = ["costoPorPanel", "costoInstalacion"];
     if (tipoSistema === "aislado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones", "costoBaterias");
     if (tipoSistema === "interconectado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones");
@@ -250,15 +291,12 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     }
   };
 
+  // Omitir análisis desde paso 7: usar el resultado técnico ya calculado
   const handleOmitir = () => {
-    const camposEconomicos = [
-      "costoPorPanel", "costoInversor", "costoBaterias", "costoRegulador",
-      "costoProtecciones", "costoInstalacion", "costoCableado", "precioKwh",
-      "costoBomba", "costoVariador", "precioKwhConvencional", "consumoDieselAnual", "precioDieselLitro"
-    ] as const;
-    camposEconomicos.forEach(f => setValue(f as any, undefined as any));
-    setOmitirEconomico(true);
-    handleSubmit(onSubmit)();
+    if (technicalResult) {
+      setResult(technicalResult);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -279,6 +317,8 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
           data={result}
           onReset={() => {
             setResult(null);
+            setTechnicalResult(null);
+            setWantsEconomicAnalysis(null);
             setActiveStep(1);
             methods.reset();
           }}
@@ -620,8 +660,18 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
                     />
                   )}
 
-                  {/* STEP 6 — Módulo Económico */}
-                  {activeStep === 6 && (
+                  {/* STEP 6 — Preview técnico + decisión */}
+                  {activeStep === 6 && technicalResult && (
+                    <TechnicalPreviewStep
+                      result={technicalResult}
+                      tipoSistema={tipoSistema}
+                      onAddEconomic={handleAddEconomic}
+                      onFinish={handleFinalizarSinEconomia}
+                    />
+                  )}
+
+                  {/* STEP 7 — Módulo Económico */}
+                  {activeStep === 7 && (
                     <EconomicoStep
                       register={methods.register}
                       control={control}
@@ -638,50 +688,56 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
               </AnimatePresence>
             </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex flex-wrap justify-between items-center gap-3 mt-10 pt-6 border-t border-border">
-              <button
-                type="button"
-                onClick={prevStep}
-                disabled={activeStep === 1}
-                className="btn-secondary disabled:opacity-0"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" /> Atrás
-              </button>
-              
-              <div className="flex items-center gap-3">
-                {/* Botón Omitir: visible en el paso de Rentabilidad para todos los sistemas */}
-                {isLastStep && (
-                  <button
-                    type="button"
-                    onClick={handleOmitir}
-                    disabled={calculateMutation.isPending}
-                    className="px-5 py-2.5 rounded-xl font-medium border-2 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
-                  >
-                    Omitir análisis
-                  </button>
-                )}
+            {/* Navigation Buttons — ocultos en paso 6 (las acciones están en el propio paso) */}
+            {!isTechnicalPreviewStep && (
+              <div className="flex flex-wrap justify-between items-center gap-3 mt-10 pt-6 border-t border-border">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  disabled={activeStep === 1}
+                  className="btn-secondary disabled:opacity-0"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Atrás
+                </button>
 
-                {!isLastStep ? (
-                  <button type="button" onClick={nextStep} className="btn-next">
-                    Siguiente <ArrowRight className="w-4 h-4 ml-2 arrow-icon" />
-                  </button>
-                ) : (
-                  <button 
-                    type="button"
-                    onClick={handleCalcular}
-                    disabled={calculateMutation.isPending}
-                    className="btn-next"
-                  >
-                    {calculateMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Calculando...</>
-                    ) : (
-                      <><Zap className="w-4 h-4 mr-2" /> Calcular Sistema</>
-                    )}
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {/* Botón Omitir: solo en paso 7 (Rentabilidad) */}
+                  {isEconomicStep && (
+                    <button
+                      type="button"
+                      onClick={handleOmitir}
+                      disabled={calculateMutation.isPending}
+                      className="px-5 py-2.5 rounded-xl font-medium border-2 border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
+                    >
+                      Omitir análisis
+                    </button>
+                  )}
+
+                  {!isEconomicStep ? (
+                    <button type="button" onClick={nextStep} disabled={calculateMutation.isPending} className="btn-next">
+                      {calculateMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Calculando...</>
+                      ) : (
+                        <>Siguiente <ArrowRight className="w-4 h-4 ml-2 arrow-icon" /></>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleCalcular}
+                      disabled={calculateMutation.isPending}
+                      className="btn-next"
+                    >
+                      {calculateMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Calculando...</>
+                      ) : (
+                        <><Zap className="w-4 h-4 mr-2" /> Calcular Sistema</>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </form>
         </div>
     </div>
@@ -1195,6 +1251,129 @@ function BombeoParamsStep({ register, control, errors, watch, setValue }: any) {
       <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
         <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
         <p className="text-sm text-amber-700">La altura total se ajustará automáticamente con un factor de pérdidas del 12.5% para compensar la fricción en la tubería.</p>
+      </div>
+    </div>
+  );
+}
+
+// ================= Technical Preview Step Component =================
+function TechnicalPreviewStep({ result, tipoSistema, onAddEconomic, onFinish }: {
+  result: SFVResultado;
+  tipoSistema: string;
+  onAddEconomic: () => void;
+  onFinish: () => void;
+}) {
+  const fmt2 = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt3 = (n: number) => n.toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+
+  const Chip = ({ label, value }: { label: string; value: string }) => (
+    <div className="bg-white border border-border rounded-xl px-4 py-3 flex flex-col gap-0.5 shadow-sm">
+      <span className="text-xs text-muted-foreground font-medium">{label}</span>
+      <span className="text-base font-bold text-foreground">{value}</span>
+    </div>
+  );
+
+  const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-bold text-foreground uppercase tracking-wide">
+        {icon}
+        <span>{title}</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {children}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="border-b border-border pb-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-xl bg-green-100">
+            <CheckCircle2 className="w-6 h-6 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Resultados Técnicos</h2>
+            <p className="text-muted-foreground text-sm">El dimensionamiento está completo. Revisa los resultados antes de continuar.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Datos del sistema */}
+      <Section title="Arreglo Fotovoltaico" icon={<SolarPanelIcon className="w-4 h-4 text-amber-500" />}>
+        <Chip label="Paneles totales" value={`${result.paneles.totalPaneles}`} />
+        <Chip label="Serie × Paralelo" value={`${result.paneles.panelesSerie} × ${result.paneles.panelesParalelo}`} />
+        <Chip label="Voltaje sistema" value={`${result.paneles.voltajeSistema} V`} />
+        <Chip label="Corriente sistema" value={`${fmt3(result.paneles.corrienteSistema)} A`} />
+        <Chip label="Inclinación" value={`${result.anguloInclinacion}°`} />
+        <Chip label="Orientación" value={result.orientacion === "sur" ? "Sur" : "Norte"} />
+      </Section>
+
+      {tipoSistema === "aislado" && result.baterias && (
+        <Section title="Banco de Baterías" icon={<Battery className="w-4 h-4 text-blue-500" />}>
+          <Chip label="Baterías totales" value={`${result.baterias.totalBaterias}`} />
+          <Chip label="Serie × Paralelo" value={`${result.baterias.bateriasSerie} × ${result.baterias.bateriasParalelo}`} />
+          <Chip label="Cap. nominal" value={`${fmt2(result.baterias.capacidadNominal)} Ah`} />
+          <Chip label="Cap. comercial" value={`${result.baterias.capacidadComercial} Ah`} />
+          <Chip label="Voltaje batería" value={`${result.baterias.voltajeBateria} V`} />
+          <Chip label="DoD" value={`${(result.baterias.dod * 100).toFixed(0)}%`} />
+        </Section>
+      )}
+
+      {(tipoSistema === "aislado" || tipoSistema === "interconectado") && result.inversor && (
+        <Section title="Inversor" icon={<Zap className="w-4 h-4 text-violet-500" />}>
+          <Chip label="Corriente mínima" value={`${fmt3(result.inversor.corrienteMinima)} A`} />
+          {result.regulador && <Chip label="Regulador (I mín.)" value={`${fmt3(result.regulador.corrienteMinima)} A`} />}
+        </Section>
+      )}
+
+      {tipoSistema === "bombeo" && result.bomba && (
+        <Section title="Bomba y Variador" icon={<Droplets className="w-4 h-4 text-sky-500" />}>
+          <Chip label="Potencia bomba" value={`${fmt3(result.bomba.potenciaHP)} HP`} />
+          <Chip label="Potencia eléctrica" value={`${fmt3(result.bomba.potenciaKw)} kW`} />
+          {result.variador && <Chip label="Variador (I máx.)" value={`${fmt2(result.variador.corrienteMaxima)} A`} />}
+        </Section>
+      )}
+
+      {result.cableado && (
+        <Section title="Cableado y Protecciones" icon={<Zap className="w-4 h-4 text-orange-500" />}>
+          <Chip label="Corriente mínima cable" value={`${fmt3(result.cableado.corrienteMinima)} A`} />
+          {result.protecciones?.seccionadorCorriente && <Chip label="Seccionador corriente" value={`${fmt2(result.protecciones.seccionadorCorriente)} A`} />}
+          {result.protecciones?.seccionadorVoltaje && <Chip label="Seccionador voltaje" value={`${fmt2(result.protecciones.seccionadorVoltaje)} V`} />}
+          {result.protecciones?.sobretensionesVoltaje && <Chip label="Sobretensiones" value={`${fmt2(result.protecciones.sobretensionesVoltaje)} V`} />}
+        </Section>
+      )}
+
+      {result.ambiental && (
+        <Section title="Producción Energética (estimado)" icon={<BarChart2 className="w-4 h-4 text-green-600" />}>
+          <Chip label="Energía anual" value={`${fmt2(result.ambiental.energiaAnualKwh)} kWh`} />
+          <Chip label="CO₂ evitado/año" value={`${fmt2(result.ambiental.ahorroCo2PrimerAnio)} kg`} />
+          <Chip label="CO₂ en 25 años" value={`${fmt2(result.ambiental.ahorroCo2TotalTon)} ton`} />
+        </Section>
+      )}
+
+      {/* Decisión */}
+      <div className="border-t border-border pt-6">
+        <p className="text-base font-semibold text-foreground mb-4">¿Deseas añadir un análisis económico?</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onAddEconomic}
+            className="flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm hover:bg-primary/10 transition-all"
+          >
+            <DollarSign className="w-5 h-5" />
+            Sí, añadir análisis económico
+          </button>
+          <button
+            type="button"
+            onClick={onFinish}
+            className="flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl border-2 border-border bg-white text-foreground font-semibold text-sm hover:bg-muted/50 transition-all"
+          >
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
+            No, ver solo resultados técnicos
+          </button>
+        </div>
       </div>
     </div>
   );
