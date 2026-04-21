@@ -149,12 +149,23 @@ export function generatePDF(data: SFVResultado) {
     data.inversor ? row("Corriente mínima inversor", `${data.inversor.corrienteMinima.toFixed(2)} A`) : "",
     data.regulador ? row("Corriente mínima regulador", `${data.regulador.corrienteMinima.toFixed(2)} A`) : "",
     row("Corriente mínima cableado", `${data.cableado.corrienteMinima.toFixed(2)} A`),
-    data.protecciones ? row("Corriente fusible CC", `${data.protecciones.corrienteFusible.toFixed(2)} A`) : "",
+    data.protecciones?.corrienteFusible !== undefined ? row("Corriente fusible CC", `${data.protecciones.corrienteFusible.toFixed(2)} A`) : "",
     data.protecciones?.breakerCC !== undefined ? row("Breaker CC", `${data.protecciones.breakerCC.toFixed(2)} A`) : "",
     data.protecciones?.seccionadorVoltaje !== undefined ? row("Interruptor seccionador", `${data.protecciones.seccionadorVoltaje.toFixed(2)} V / ${data.protecciones.seccionadorCorriente?.toFixed(2)} A`) : "",
     data.protecciones?.sobretensionesVoltaje !== undefined ? row("Protector sobretensiones", `${data.protecciones.sobretensionesVoltaje.toFixed(2)} V`) : "",
     data.protecciones?.termomagneticoCorriente !== undefined ? row("Termomagnético CA", `${data.protecciones.termomagneticoCorriente.toFixed(2)} A`) : "",
   ].join("");
+
+  const bombaRows = data.bomba ? [
+    row("Potencia de la bomba", `${data.bomba.potenciaHP.toFixed(3)} HP`),
+    row("Potencia eléctrica", `${data.bomba.potenciaKw.toFixed(3)} kW`),
+    row("Potencia hidráulica", `${data.bomba.potenciaHidraulicaW.toFixed(2)} W`),
+    row("Caudal", `${data.bomba.caudalM3s.toFixed(6)} m³/s`),
+    ...(data.variador ? [
+      row("Corriente máx. variador", `${data.variador.corrienteMaxima.toFixed(2)} A`),
+      ...(data.variador.tipo ? [row("Tipo de variador", data.variador.tipo)] : []),
+    ] : []),
+  ].join("") : "";
 
   const ambientalRows = [
     row("Energía anual (1er año)", `${ambiental.energiaAnualKwh.toFixed(2)} kWh`),
@@ -164,7 +175,7 @@ export function generatePDF(data: SFVResultado) {
 
   const economicoRows = eco ? [
     row("Inversión total del sistema", `$${eco.costoTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`),
-    row("Precio electricidad", `$${eco.precioKwh.toFixed(4)} / kWh`),
+    eco.precioKwh !== undefined ? row("Precio electricidad", `$${eco.precioKwh.toFixed(4)} / kWh`) : "",
     row("Ahorro estimado (1er año)", `$${eco.ahorroPrimerAnio.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`),
     row("Ahorro total (25 años)", `$${eco.ahorroTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`),
     row("Período de recuperación (payback)", eco.payback !== null ? `${eco.payback} años` : "No se recupera en la vida útil"),
@@ -375,6 +386,7 @@ export function generatePDF(data: SFVResultado) {
   <div class="content">
     ${section("Arreglo Fotovoltaico (Paneles)", panelesRows)}
     ${baterias ? section("Banco de Baterías", bateriasRows) : ""}
+    ${bombaRows ? section("Bomba y Variador de Frecuencia", bombaRows) : ""}
     ${section("Componentes Eléctricos", electricosRows)}
     ${section("Análisis Ambiental", ambientalRows)}
     ${eco ? section("Análisis Económico", economicoRows) : ""}
