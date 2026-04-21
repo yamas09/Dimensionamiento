@@ -289,7 +289,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
   const handleCalcular = async () => {
     const econFields: string[] = ["costoPorPanel", "costoInstalacion"];
     if (tipoSistema === "aislado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones", "costoBaterias");
-    if (tipoSistema === "interconectado") econFields.push("costoInversor", "costoRegulador", "costoProtecciones");
+    if (tipoSistema === "interconectado") econFields.push("costoInversor", "costoProtecciones");
     if (tipoSistema === "bombeo") econFields.push("costoBomba", "costoVariador");
     if (tipoSistema !== "bombeo" && metodoPerfil === "cargas") econFields.push("precioKwh");
 
@@ -1488,7 +1488,9 @@ function EconomicoStep({ register, control, errors, tipoSistema, metodoPerfil, r
               {tipoSistema === "aislado" && (
                 <MoneyInput name="costoBaterias"   label="Costo banco de baterías"     error={errors.costoBaterias?.message} />
               )}
-              <MoneyInput name="costoRegulador"    label="Costo del regulador"         error={errors.costoRegulador?.message} />
+              {tipoSistema === "aislado" && (
+                <MoneyInput name="costoRegulador"  label="Costo del regulador"         error={errors.costoRegulador?.message} />
+              )}
               <MoneyInput name="costoProtecciones" label="Costo de protecciones"       error={errors.costoProtecciones?.message} />
               <MoneyInput name="costoCableado"     label="Costo del cableado"          error={errors.costoCableado?.message} />
               <MoneyInput name="costoInstalacion"  label="Costo de instalación"        error={errors.costoInstalacion?.message} />
