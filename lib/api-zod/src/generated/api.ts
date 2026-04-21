@@ -60,63 +60,28 @@ export const CalcularSFVBody = zod.object({
     .number()
     .optional()
     .describe("Voltaje nominal de la batería seleccionada [V]"),
-  // ── Campos específicos bombeo ──
+  voltajeNominalBomba: zod
+    .union([zod.literal(120), zod.literal(400)])
+    .optional()
+    .describe(
+      "Voltaje nominal de la bomba (120 V monofásico \/ 400 V trifásico)",
+    ),
   volumenLitros: zod
     .number()
     .optional()
     .describe("Volumen a bombear por día [L]"),
-  alturaDebajo: zod.number().optional().describe("Profundidad agua-suelo [m]"),
-  alturaEncima: zod.number().optional().describe("Altura suelo-tanque [m]"),
-  usarHspParaBombeo: zod
-    .boolean()
-    .optional()
-    .describe("Usar HSP como horas de bombeo"),
-  horasBombeoManual: zod
+  alturaDebajo: zod
     .number()
     .optional()
-    .describe("Horas de bombeo diarias (manual) [h]"),
-  // ── Costos comunes ──
-  costoPorPanel: zod.number().optional(),
-  costoInversor: zod.number().optional(),
-  costoBaterias: zod.number().optional(),
-  costoRegulador: zod.number().optional(),
-  costoProtecciones: zod.number().optional(),
-  costoInstalacion: zod.number().optional(),
-  costoCableado: zod.number().optional().describe("Costo del cableado [$MX]"),
-  precioKwh: zod.number().optional(),
-  // ── Costos específicos bombeo ──
-  costoBomba: zod.number().optional().describe("Costo de la bomba [$MX]"),
-  costoVariador: zod
-    .number()
-    .optional()
-    .describe("Costo del variador de frecuencia [$MX]"),
-  tipoCombustible: zod
-    .enum(["electrico", "diesel"])
-    .optional()
-    .describe("Tipo de energía convencional comparada"),
-  precioKwhConvencional: zod
-    .number()
-    .optional()
-    .describe("Precio de electricidad convencional [$/kWh]"),
-  consumoDieselAnual: zod
-    .number()
-    .optional()
-    .describe("Consumo anual de diésel [L]"),
-  precioDieselLitro: zod
-    .number()
-    .optional()
-    .describe("Precio del diésel [$/L]"),
+    .describe("Profundidad nivel agua → suelo [m]"),
+  alturaEncima: zod.number().optional().describe("Altura suelo → tanque [m]"),
+  usarHspParaBombeo: zod.boolean().optional(),
+  horasBombeoManual: zod.number().optional(),
 });
 
 export const CalcularSFVResponse = zod.object({
   energiaDiariaKwh: zod.number(),
   potenciaDemandaKw: zod.number(),
-  anguloInclinacion: zod
-    .number()
-    .describe("Ángulo óptimo de inclinación de los paneles [°]"),
-  orientacion: zod
-    .enum(["sur", "norte"])
-    .describe("Orientación recomendada según hemisferio"),
   paneles: zod.object({
     totalPaneles: zod.number(),
     panelesSerie: zod.number(),
@@ -150,27 +115,12 @@ export const CalcularSFVResponse = zod.object({
   }),
   protecciones: zod
     .object({
-      corrienteFusible: zod.number().optional(),
+      corrienteFusible: zod.number(),
       breakerCC: zod.number().optional(),
       seccionadorVoltaje: zod.number().optional(),
       seccionadorCorriente: zod.number().optional(),
       sobretensionesVoltaje: zod.number().optional(),
       termomagneticoCorriente: zod.number().optional(),
-    })
-    .optional(),
-  bomba: zod
-    .object({
-      potenciaHP: zod.number(),
-      potenciaKw: zod.number(),
-      potenciaHidraulicaW: zod.number(),
-      caudalM3s: zod.number(),
-    })
-    .optional(),
-  variador: zod
-    .object({
-      vocTotal: zod.number().optional(),
-      tipo: zod.string().optional(),
-      corrienteMaxima: zod.number(),
     })
     .optional(),
   ambiental: zod.object({
@@ -180,21 +130,4 @@ export const CalcularSFVResponse = zod.object({
     vectorAhorrosCo2: zod.array(zod.number()),
     vectorDegradacion: zod.array(zod.number()),
   }),
-  economico: zod
-    .object({
-      costoTotal: zod.number(),
-      precioKwh: zod.number().optional(),
-      ahorroPrimerAnio: zod.number(),
-      ahorroTotal: zod.number(),
-      payback: zod.number().nullable(),
-      vectorAhorros: zod.array(zod.number()),
-      ahorrosAcumulados: zod.array(zod.number()),
-      flujoCaja: zod
-        .array(zod.number())
-        .describe("Flujo acumulado año 0..25 (año 0 = -inversión)"),
-      // Bombeo específico
-      costoConvencional: zod.number().optional(),
-      costoMantenimiento: zod.number().optional(),
-    })
-    .optional(),
 });

@@ -48,6 +48,7 @@ const sfvSchema = z.object({
   alturaEncima: z.coerce.number().min(0).optional(),
   usarHspParaBombeo: z.boolean().optional(),
   horasBombeoManual: z.coerce.number().min(0.1).max(24).optional(),
+  voltajeNominalBomba: z.literal(120).or(z.literal(400)).optional(),
   // Módulo económico común
   costoPorPanel:    z.coerce.number().min(0).optional(),
   costoInversor:    z.coerce.number().min(0).optional(),
@@ -87,6 +88,9 @@ const sfvSchema = z.object({
     }
     if (!data.usarHspParaBombeo && !data.horasBombeoManual) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ingresa las horas de bombeo", path: ["horasBombeoManual"] });
+    }
+    if (!data.voltajeNominalBomba) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Selecciona el voltaje nominal de la bomba", path: ["voltajeNominalBomba"] });
     }
   }
   if (data.tipoSistema === "aislado") {
@@ -152,6 +156,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
       alturaEncima: undefined,
       usarHspParaBombeo: true,
       horasBombeoManual: undefined,
+      voltajeNominalBomba: undefined,
       // Costos
       costoPorPanel: undefined,
       costoInversor: undefined,
@@ -209,7 +214,7 @@ export default function CalculatorPage({ result, setResult }: CalculatorPageProp
     if (activeStep === 2) fieldsToValidate = [];
     if (activeStep === 3) {
       if (tipoSistema === "bombeo") {
-        fieldsToValidate = ["volumenLitros", "alturaDebajo", "alturaEncima"];
+        fieldsToValidate = ["volumenLitros", "alturaDebajo", "alturaEncima", "voltajeNominalBomba"];
         if (!watch("usarHspParaBombeo")) fieldsToValidate.push("horasBombeoManual");
       } else {
         if (metodoPerfil === "cargas") fieldsToValidate = ["cargas"];
@@ -1121,6 +1126,7 @@ function BateriasStep({ control, register, errors, watch, setValue, tipoBateria,
 // ================= Bombeo Params Step Component =================
 function BombeoParamsStep({ register, control, errors, watch, setValue }: any) {
   const usarHsp = watch("usarHspParaBombeo");
+  const voltajeNominalBomba = watch("voltajeNominalBomba");
 
   return (
     <div className="space-y-6">
@@ -1137,6 +1143,25 @@ function BombeoParamsStep({ register, control, errors, watch, setValue }: any) {
           </FormField>
           <FormField label="Altura: suelo → tanque de almacenamiento [m]" error={errors.alturaEncima?.message}>
             <input type="number" step="any" min="0" {...register("alturaEncima")} className="input-field" placeholder="Ej. 5" />
+          </FormField>
+          <FormField label="Voltaje nominal de la bomba" error={errors.voltajeNominalBomba?.message}>
+            <div className="flex gap-3">
+              {([120, 400] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setValue("voltajeNominalBomba", v)}
+                  className={cn(
+                    "flex-1 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-all text-center",
+                    voltajeNominalBomba === v
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  )}
+                >
+                  {v === 120 ? "120 V — monofásico" : "400 V — trifásico"}
+                </button>
+              ))}
+            </div>
           </FormField>
         </div>
 
@@ -1339,10 +1364,21 @@ function TechnicalPreviewStep({ result, tipoSistema, onAddEconomic, onFinish }: 
       )}
 
       {tipoSistema === "bombeo" && result.bomba && (
-        <Section title="Bomba y Variador" icon={<Droplets className="w-4 h-4 text-sky-500" />}>
+        <Section title="Bomba y Variador de Frecuencia" icon={<Droplets className="w-4 h-4 text-sky-500" />}>
           <Chip label="Potencia bomba" value={`${fmt3(result.bomba.potenciaHP)} HP`} />
-          <Chip label="Potencia eléctrica" value={`${fmt3(result.bomba.potenciaKw)} kW`} />
-          {result.variador && <Chip label="Variador (I máx.)" value={`${fmt2(result.variador.corrienteMaxima)} A`} />}
+          <Chip label="Potencia eléctrica (P_e)" value={`${fmt3(result.bomba.potenciaKw)} kW`} />
+          <Chip label="Potencia hidráulica" value={`${fmt2(result.bomba.potenciaHidraulicaW)} W`} />
+          <Chip label="Caudal (Q)" value={`${(result.bomba.caudalM3s * 1000).toFixed(3)} L/s`} />
+          {result.variador && <>
+            <Chip label="I_max variador" value={`${fmt2(result.variador.corrienteMaxima)} A`} />
+            {(result.variador as any).tipo && <Chip label="Variador requerido" value={(result.variador as any).tipo} />}
+            {(result.variador as any).compatible === false && (
+              <div className="col-span-2 sm:col-span-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-sm text-amber-700">
+                <Info className="w-4 h-4 shrink-0" />
+                El Voc de la cadena de paneles queda fuera del rango recomendado para este variador. Ajusta el número de paneles en serie o el voltaje de la bomba.
+              </div>
+            )}
+          </>}
         </Section>
       )}
 

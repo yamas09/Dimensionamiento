@@ -10,6 +10,7 @@ import type { RegistroRecibo } from "./registroRecibo";
 import type { SFVInputMetodoPerfil } from "./sFVInputMetodoPerfil";
 import type { SFVInputTipoBateria } from "./sFVInputTipoBateria";
 import type { SFVInputTipoSistema } from "./sFVInputTipoSistema";
+import type { SFVInputVoltajeNominalBomba } from "./sFVInputVoltajeNominalBomba";
 
 export interface SFVInput {
   latitud: number;
@@ -32,4 +33,14 @@ export interface SFVInput {
   bateriaAh?: number;
   /** Voltaje nominal de la batería seleccionada [V] */
   bateriaV?: number;
+  /** Voltaje nominal de la bomba (120 V monofásico / 400 V trifásico) */
+  voltajeNominalBomba?: SFVInputVoltajeNominalBomba;
+  /** Volumen a bombear por día [L] */
+  volumenLitros?: number;
+  /** Profundidad nivel agua → suelo [m] */
+  alturaDebajo?: number;
+  /** Altura suelo → tanque [m] */
+  alturaEncima?: number;
+  usarHspParaBombeo?: boolean;
+  horasBombeoManual?: number;
 }

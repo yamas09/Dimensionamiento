@@ -60,13 +60,21 @@ function calcularPanelesParalelo(totalPaneles: number, panelesSerie: number): nu
 }
 
 // ── Bombeo ──
-// calcular_potencias_bombeo: fórmula Python fiel
-// Se corrige la unidad del caudal: caudal [m³/s] = volumen_m3 / (horas * 3600)
+// Rangos DC de entrada al variador según voltaje nominal de la bomba
+const RANGOS_VARIADOR: Record<number, { vocMin: number; vocMax: number; label: string }> = {
+  120: { vocMin: 345, vocMax: 385, label: "120 V monofásico" },
+  400: { vocMin: 740, vocMax: 780, label: "400 V trifásico" },
+};
+
+// calcular_potencias_bombeo
+// Q en m³/s, H en m, P_h en W
+// ρ = 1000 kg/m³, g = 9.81 m/s²
+// η_bomba: 60-70% (default 0.65), η_motor: 85-90% (default 0.87)
 function calcularPotenciasBombeo(
   caudalM3s: number,
   alturaM: number,
-  eficienciaBomba = 0.60,
-  eficienciaMotor = 0.85
+  eficienciaBomba = 0.65,
+  eficienciaMotor = 0.87
 ): { potenciaHP: number; potenciaHidraulicaW: number; potenciaElectricaW: number } {
   const potenciaHidraulica = (1000 * 9.81 * caudalM3s * alturaM) / eficienciaBomba;
   const potenciaElectrica = potenciaHidraulica / eficienciaMotor;
@@ -78,38 +86,70 @@ function calcularPotenciasBombeo(
   };
 }
 
-// calcular_energia_bombeo: (potencia_electrica * hsp) / 1000 [kWh]
+// calcular_energia_bombeo: E_d = P_e * HSP / 1000 [kWh]
 function calcularEnergiaBombeo(potenciaElectricaW: number, hsp: number): number {
   return parseFloat(((potenciaElectricaW * hsp) / 1000).toFixed(6));
 }
 
-// paneles_bombeo
+// paneles_bombeo: metodología basada en rango DC del variador
+// 1. voltajeNominalBomba → rango Voc DC (tabla de variadores)
+// 2. panelesSerie: número de paneles en serie para alcanzar la tensión nominal de entrada del variador
+// 3. panelesParalelo: paneles en paralelo para alcanzar la potencia eléctrica P_e (con factor 1.2)
+// 4. corrienteMaxima: I_max = P_SFV / V_sistema (V_sistema = Voc string)
 function panelesBombeo(
-  energiaDiariaNecesaria: number,
   potenciaElectricaW: number,
-  hsp: number,
-  vnomPanel: number
-): { panelesSerie: number; voltajeSistema: number; panelesParalelo: number; panelesTotal: number } {
-  const potenciaKw = potenciaElectricaW / 1000;
-  const numPaneles = Math.ceil((1.2 * energiaDiariaNecesaria) / (potenciaKw * hsp));
-  let voltajeSistema: number;
-  if (energiaDiariaNecesaria < 2) voltajeSistema = 12;
-  else if (energiaDiariaNecesaria < 4.5) voltajeSistema = 24;
-  else voltajeSistema = 48;
-  const panelesSerie = Math.ceil(voltajeSistema / vnomPanel);
-  if (panelesSerie === 0) throw new Error("Paneles en serie no puede ser 0");
-  const panelesParalelo = Math.ceil(numPaneles / panelesSerie);
-  return { panelesSerie, voltajeSistema, panelesParalelo, panelesTotal: panelesSerie * panelesParalelo };
-}
+  vocPanel: number,
+  potenciaPanel: number,
+  voltajeNominalBomba: number
+): {
+  panelesSerie: number;
+  panelesParalelo: number;
+  panelesTotal: number;
+  voltajeSistema: number;
+  corrienteMaxima: number;
+  variadortipo: string;
+  compatible: boolean;
+} {
+  const rango = RANGOS_VARIADOR[voltajeNominalBomba] ?? RANGOS_VARIADOR[120];
+  const vocTarget = (rango.vocMin + rango.vocMax) / 2; // punto medio del rango
 
-// seleccionar_variador: verifica compatibilidad por Voc total
-function seleccionarVariador(vocPanel: number, panelesSerie: number): { vocTotal: number; tipo: string } {
-  const vocTotal = vocPanel * panelesSerie;
-  let tipo: string;
-  if (vocTotal >= 345 && vocTotal <= 385) tipo = "230 V";
-  else if (vocTotal >= 740 && vocTotal <= 780) tipo = "400 V";
-  else tipo = "No compatible";
-  return { vocTotal: parseFloat(vocTotal.toFixed(2)), tipo };
+  // Número de paneles en serie para alcanzar la tensión nominal de entrada del variador
+  let panelesSerie = Math.max(1, Math.round(vocTarget / vocPanel));
+  let vocTotal = panelesSerie * vocPanel;
+  let compatible = vocTotal >= rango.vocMin && vocTotal <= rango.vocMax;
+
+  // Ajuste fino si no cae en rango
+  if (!compatible) {
+    for (const delta of [-2, -1, 1, 2, 3, -3]) {
+      const n = panelesSerie + delta;
+      if (n <= 0) continue;
+      const voc = n * vocPanel;
+      if (voc >= rango.vocMin && voc <= rango.vocMax) {
+        panelesSerie = n;
+        vocTotal = voc;
+        compatible = true;
+        break;
+      }
+    }
+  }
+
+  // Paneles en paralelo para alcanzar la potencia eléctrica necesaria (factor 1.2 de pérdidas)
+  const panelesParalelo = Math.max(1, Math.ceil((1.2 * potenciaElectricaW) / (panelesSerie * potenciaPanel)));
+  const panelesTotal = panelesSerie * panelesParalelo;
+
+  // I_max = P_SFV / V_sistema  (controlador/inversor dimensionado por corriente máxima)
+  const voltajeSistema = parseFloat(vocTotal.toFixed(2));
+  const corrienteMaxima = parseFloat((potenciaElectricaW / voltajeSistema).toFixed(2));
+
+  return {
+    panelesSerie,
+    panelesParalelo,
+    panelesTotal,
+    voltajeSistema,
+    corrienteMaxima,
+    variadortipo: `${voltajeNominalBomba} V — Voc entrada: ${rango.vocMin}–${rango.vocMax} Vcc`,
+    compatible,
+  };
 }
 
 // ── Baterías ──
@@ -313,22 +353,30 @@ router.post("/calcular", (req, res) => {
 
     const volumenM3 = data.volumenLitros / 1000;
     const horasBombeo = data.usarHspParaBombeo ? data.hsp : (data.horasBombeoManual ?? data.hsp);
-    // Caudal correcto: m³/s = volumen_m³ / (horas * 3600)
+    // Q [m³/s] = volumen [m³] / (horas × 3600)
     const caudalM3s = volumenM3 / (horasBombeo * 3600);
+    // H_total con factor de corrección del 112.5% (fricción en tubería)
     const alturaM = (data.alturaDebajo + data.alturaEncima) * 1.125;
 
+    // P_h = ρ·g·Q·H / η_bomba ;  P_e = P_h / η_motor  (1 HP = 746 W)
     const { potenciaHP, potenciaHidraulicaW, potenciaElectricaW } = calcularPotenciasBombeo(caudalM3s, alturaM);
+    // E_d = P_e × HSP / 1000 [kWh]
     const energiaDiariaNecesaria = calcularEnergiaBombeo(potenciaElectricaW, data.hsp);
 
-    // Paneles bombeo
-    const { panelesSerie, voltajeSistema, panelesParalelo, panelesTotal } = panelesBombeo(
-      energiaDiariaNecesaria, potenciaElectricaW, data.hsp, data.panelVnom
-    );
+    // Voltaje nominal de la bomba (default 120 V si no se especifica)
+    const voltajeNominalBomba = (data as any).voltajeNominalBomba ?? 120;
+
+    // Paneles bombeo — metodología basada en rango DC del variador
+    const {
+      panelesSerie, panelesParalelo, panelesTotal,
+      voltajeSistema, corrienteMaxima: corrienteMaximaVariador,
+      variadortipo, compatible,
+    } = panelesBombeo(potenciaElectricaW, data.panelVoc, data.panelPotencia, voltajeNominalBomba);
+
+    // I_sistema = I_mp × paneles en paralelo (para protecciones)
     const corrienteSistema = parseFloat((data.panelImp * panelesParalelo).toFixed(2));
 
-    // Variador (solo corriente máxima, sin seleccionar tipo)
     const potenciaPostPaneles = panelesTotal * data.panelPotencia;
-    const corrienteMaximaVariador = parseFloat((potenciaPostPaneles / voltajeSistema).toFixed(2));
 
     // Protecciones bombeo
     const seccionadorBombeo = calcularInterruptorSeccionador(data.panelVoc, data.panelIsc);
@@ -416,7 +464,12 @@ router.post("/calcular", (req, res) => {
         potenciaHidraulicaW: parseFloat(potenciaHidraulicaW.toFixed(2)),
         caudalM3s: parseFloat(caudalM3s.toFixed(6)),
       },
-      variador: { corrienteMaxima: corrienteMaximaVariador },
+      variador: {
+        corrienteMaxima: corrienteMaximaVariador,
+        tipo: variadortipo,
+        compatible,
+        voltajeNominal: voltajeNominalBomba,
+      },
       protecciones: {
         seccionadorCorriente: seccionadorBombeo.corriente,
         seccionadorVoltaje: seccionadorBombeo.voltaje,

@@ -22,4 +22,5 @@ export * from "./sFVInput";
 export * from "./sFVInputMetodoPerfil";
 export * from "./sFVInputTipoBateria";
 export * from "./sFVInputTipoSistema";
+export * from "./sFVInputVoltajeNominalBomba";
 export * from "./sFVResultado";

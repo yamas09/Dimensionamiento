@@ -149,6 +149,23 @@ components:
         bateriaV:
           type: number
           description: Voltaje nominal de la batería seleccionada [V]
+        voltajeNominalBomba:
+          type: integer
+          enum: [120, 400]
+          description: Voltaje nominal de la bomba (120 V monofásico / 400 V trifásico)
+        volumenLitros:
+          type: number
+          description: Volumen a bombear por día [L]
+        alturaDebajo:
+          type: number
+          description: Profundidad nivel agua → suelo [m]
+        alturaEncima:
+          type: number
+          description: Altura suelo → tanque [m]
+        usarHspParaBombeo:
+          type: boolean
+        horasBombeoManual:
+          type: number
       required:
         - latitud
         - longitud

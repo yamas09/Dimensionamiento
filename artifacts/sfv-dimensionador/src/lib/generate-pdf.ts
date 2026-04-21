@@ -157,13 +157,14 @@ export function generatePDF(data: SFVResultado) {
   ].join("");
 
   const bombaRows = data.bomba ? [
-    row("Potencia de la bomba", `${data.bomba.potenciaHP.toFixed(3)} HP`),
-    row("Potencia eléctrica", `${data.bomba.potenciaKw.toFixed(3)} kW`),
-    row("Potencia hidráulica", `${data.bomba.potenciaHidraulicaW.toFixed(2)} W`),
-    row("Caudal", `${data.bomba.caudalM3s.toFixed(6)} m³/s`),
+    row("Potencia hidráulica (P_h)", `${data.bomba.potenciaHidraulicaW.toFixed(2)} W`),
+    row("Potencia eléctrica (P_e)", `${data.bomba.potenciaKw.toFixed(3)} kW`),
+    row("Potencia nominal requerida", `${data.bomba.potenciaHP.toFixed(3)} HP (≥ valor comercial inmediato superior)`),
+    row("Caudal (Q)", `${(data.bomba.caudalM3s * 1000).toFixed(4)} L/s  |  ${(data.bomba.caudalM3s * 3600).toFixed(3)} m³/h`),
     ...(data.variador ? [
-      row("Corriente máx. variador", `${data.variador.corrienteMaxima.toFixed(2)} A`),
-      ...(data.variador.tipo ? [row("Tipo de variador", data.variador.tipo)] : []),
+      row("I_max controlador/variador", `${data.variador.corrienteMaxima.toFixed(2)} A`),
+      ...((data.variador as any).tipo ? [row("Variador requerido", (data.variador as any).tipo)] : []),
+      ...((data.variador as any).compatible === false ? [row("⚠ Compatibilidad variador", "Voc fuera del rango — revisar configuración de paneles")] : []),
     ] : []),
   ].join("") : "";
 

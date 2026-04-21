@@ -59,7 +59,16 @@ export const SFVInputTipoBateria = {
   Litio: "Litio",
 } as const;
 
-export type TipoCombustible = "electrico" | "diesel";
+/**
+ * Voltaje nominal de la bomba (120 V monofásico / 400 V trifásico)
+ */
+export type SFVInputVoltajeNominalBomba =
+  (typeof SFVInputVoltajeNominalBomba)[keyof typeof SFVInputVoltajeNominalBomba];
+
+export const SFVInputVoltajeNominalBomba = {
+  NUMBER_120: 120,
+  NUMBER_400: 400,
+} as const;
 
 export interface SFVInput {
   latitud: number;
@@ -82,47 +91,16 @@ export interface SFVInput {
   bateriaAh?: number;
   /** Voltaje nominal de la batería seleccionada [V] */
   bateriaV?: number;
-  // ── Bombeo ──
+  /** Voltaje nominal de la bomba (120 V monofásico / 400 V trifásico) */
+  voltajeNominalBomba?: SFVInputVoltajeNominalBomba;
   /** Volumen a bombear por día [L] */
   volumenLitros?: number;
-  /** Profundidad agua-suelo [m] */
+  /** Profundidad nivel agua → suelo [m] */
   alturaDebajo?: number;
-  /** Altura suelo-tanque [m] */
+  /** Altura suelo → tanque [m] */
   alturaEncima?: number;
-  /** Usar HSP como horas de bombeo */
   usarHspParaBombeo?: boolean;
-  /** Horas de bombeo diarias (manual) [h] */
   horasBombeoManual?: number;
-  // ── Costos comunes ──
-  /** Costo unitario por panel [$MX] */
-  costoPorPanel?: number;
-  /** Costo del inversor [$MX] */
-  costoInversor?: number;
-  /** Costo del banco de baterías [$MX] — solo sistema aislado */
-  costoBaterias?: number;
-  /** Costo del regulador/controlador de carga [$MX] */
-  costoRegulador?: number;
-  /** Costo de protecciones [$MX] */
-  costoProtecciones?: number;
-  /** Costo de instalación [$MX] */
-  costoInstalacion?: number;
-  /** Costo del cableado [$MX] */
-  costoCableado?: number;
-  /** Precio de la electricidad [$MX/kWh] — requerido cuando metodoPerfil=cargas */
-  precioKwh?: number;
-  // ── Costos bombeo ──
-  /** Costo de la bomba [$MX] */
-  costoBomba?: number;
-  /** Costo del variador de frecuencia [$MX] */
-  costoVariador?: number;
-  /** Tipo de energía convencional comparada */
-  tipoCombustible?: TipoCombustible;
-  /** Precio de electricidad convencional [$/kWh] */
-  precioKwhConvencional?: number;
-  /** Consumo anual de diésel [L] */
-  consumoDieselAnual?: number;
-  /** Precio del diésel [$/L] */
-  precioDieselLitro?: number;
 }
 
 export interface ResultadoPaneles {
@@ -156,25 +134,12 @@ export interface ResultadoCableado {
 }
 
 export interface ResultadoProtecciones {
-  corrienteFusible?: number;
+  corrienteFusible: number;
   breakerCC?: number;
   seccionadorVoltaje?: number;
   seccionadorCorriente?: number;
   sobretensionesVoltaje?: number;
   termomagneticoCorriente?: number;
-}
-
-export interface ResultadoBomba {
-  potenciaHP: number;
-  potenciaKw: number;
-  potenciaHidraulicaW: number;
-  caudalM3s: number;
-}
-
-export interface ResultadoVariador {
-  vocTotal?: number;
-  tipo?: string;
-  corrienteMaxima: number;
 }
 
 export interface ResultadoAmbiental {
@@ -185,38 +150,14 @@ export interface ResultadoAmbiental {
   vectorDegradacion: number[];
 }
 
-export interface ResultadoEconomico {
-  costoTotal: number;
-  precioKwh?: number;
-  ahorroPrimerAnio: number;
-  ahorroTotal: number;
-  /** Año (entero) de recuperación de inversión, o null si no se recupera */
-  payback: number | null;
-  vectorAhorros: number[];
-  ahorrosAcumulados: number[];
-  /** Flujo de caja acumulado incluyendo año 0 (inversión negativa) */
-  flujoCaja: number[];
-  /** Solo bombeo: costo anual del sistema convencional */
-  costoConvencional?: number;
-  /** Solo bombeo: costo anual de mantenimiento solar (2%) */
-  costoMantenimiento?: number;
-}
-
 export interface SFVResultado {
   energiaDiariaKwh: number;
   potenciaDemandaKw: number;
-  /** Ángulo óptimo de inclinación de los paneles [°] */
-  anguloInclinacion: number;
-  /** Orientación recomendada: "sur" (latitud norte) o "norte" (latitud sur) */
-  orientacion: "sur" | "norte";
   paneles: ResultadoPaneles;
   baterias?: ResultadoBaterias;
   inversor?: ResultadoInversor;
   regulador?: ResultadoRegulador;
   cableado: ResultadoCableado;
   protecciones?: ResultadoProtecciones;
-  bomba?: ResultadoBomba;
-  variador?: ResultadoVariador;
   ambiental: ResultadoAmbiental;
-  economico?: ResultadoEconomico;
 }
