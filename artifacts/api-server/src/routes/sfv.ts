@@ -69,12 +69,12 @@ const RANGOS_VARIADOR: Record<number, { vocMin: number; vocMax: number; label: s
 // calcular_potencias_bombeo
 // Q en m³/s, H en m, P_h en W
 // ρ = 1000 kg/m³, g = 9.81 m/s²
-// η_bomba: 60-70% (default 0.65), η_motor: 85-90% (default 0.87)
+// η_bomba = 0.60, η_motor = 0.85
 function calcularPotenciasBombeo(
   caudalM3s: number,
   alturaM: number,
-  eficienciaBomba = 0.65,
-  eficienciaMotor = 0.87
+  eficienciaBomba = 0.60,
+  eficienciaMotor = 0.85
 ): { potenciaHP: number; potenciaHidraulicaW: number; potenciaElectricaW: number } {
   const potenciaHidraulica = (1000 * 9.81 * caudalM3s * alturaM) / eficienciaBomba;
   const potenciaElectrica = potenciaHidraulica / eficienciaMotor;
