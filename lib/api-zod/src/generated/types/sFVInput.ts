@@ -9,6 +9,7 @@ import type { Carga } from "./carga";
 import type { RegistroRecibo } from "./registroRecibo";
 import type { SFVInputMetodoPerfil } from "./sFVInputMetodoPerfil";
 import type { SFVInputTipoBateria } from "./sFVInputTipoBateria";
+import type { SFVInputTipoCombustible } from "./sFVInputTipoCombustible";
 import type { SFVInputTipoSistema } from "./sFVInputTipoSistema";
 import type { SFVInputVoltajeNominalBomba } from "./sFVInputVoltajeNominalBomba";
 
@@ -43,4 +44,17 @@ export interface SFVInput {
   alturaEncima?: number;
   usarHspParaBombeo?: boolean;
   horasBombeoManual?: number;
+  costoPorPanel?: number;
+  costoInversor?: number;
+  costoBaterias?: number;
+  costoProtecciones?: number;
+  costoInstalacion?: number;
+  costoCableado?: number;
+  costoBomba?: number;
+  costoVariador?: number;
+  precioKwh?: number;
+  precioKwhConvencional?: number;
+  tipoCombustible?: SFVInputTipoCombustible;
+  consumoDieselAnual?: number;
+  precioDieselLitro?: number;
 }

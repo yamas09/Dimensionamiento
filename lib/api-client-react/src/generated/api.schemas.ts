@@ -70,6 +70,14 @@ export const SFVInputVoltajeNominalBomba = {
   NUMBER_400: 400,
 } as const;
 
+export type SFVInputTipoCombustible =
+  (typeof SFVInputTipoCombustible)[keyof typeof SFVInputTipoCombustible];
+
+export const SFVInputTipoCombustible = {
+  electrico: "electrico",
+  diesel: "diesel",
+} as const;
+
 export interface SFVInput {
   latitud: number;
   longitud: number;
@@ -101,6 +109,19 @@ export interface SFVInput {
   alturaEncima?: number;
   usarHspParaBombeo?: boolean;
   horasBombeoManual?: number;
+  costoPorPanel?: number;
+  costoInversor?: number;
+  costoBaterias?: number;
+  costoProtecciones?: number;
+  costoInstalacion?: number;
+  costoCableado?: number;
+  costoBomba?: number;
+  costoVariador?: number;
+  precioKwh?: number;
+  precioKwhConvencional?: number;
+  tipoCombustible?: SFVInputTipoCombustible;
+  consumoDieselAnual?: number;
+  precioDieselLitro?: number;
 }
 
 export interface ResultadoPaneles {
@@ -150,9 +171,37 @@ export interface ResultadoAmbiental {
   vectorDegradacion: number[];
 }
 
+export interface ResultadoEconomico {
+  costoTotal: number;
+  precioKwh?: number;
+  ahorroPrimerAnio: number;
+  ahorroTotal: number;
+  payback: number | null;
+  vectorAhorros: number[];
+  ahorrosAcumulados: number[];
+  flujoCaja: number[];
+  costoConvencional: number;
+}
+
+export type SFVResultadoBomba = {
+  potenciaHP: number;
+  potenciaKw: number;
+  potenciaHidraulicaW: number;
+  caudalM3s: number;
+};
+
+export type SFVResultadoVariador = {
+  corrienteMaxima: number;
+  tipo?: string;
+  compatible?: boolean;
+  voltajeNominal?: number;
+};
+
 export interface SFVResultado {
   energiaDiariaKwh: number;
   potenciaDemandaKw: number;
+  anguloInclinacion?: number;
+  orientacion?: string;
   paneles: ResultadoPaneles;
   baterias?: ResultadoBaterias;
   inversor?: ResultadoInversor;
@@ -160,4 +209,7 @@ export interface SFVResultado {
   cableado: ResultadoCableado;
   protecciones?: ResultadoProtecciones;
   ambiental: ResultadoAmbiental;
+  economico?: ResultadoEconomico;
+  bomba?: SFVResultadoBomba;
+  variador?: SFVResultadoVariador;
 }

@@ -8,14 +8,19 @@
 import type { ResultadoAmbiental } from "./resultadoAmbiental";
 import type { ResultadoBaterias } from "./resultadoBaterias";
 import type { ResultadoCableado } from "./resultadoCableado";
+import type { ResultadoEconomico } from "./resultadoEconomico";
 import type { ResultadoInversor } from "./resultadoInversor";
 import type { ResultadoPaneles } from "./resultadoPaneles";
 import type { ResultadoProtecciones } from "./resultadoProtecciones";
 import type { ResultadoRegulador } from "./resultadoRegulador";
+import type { SFVResultadoBomba } from "./sFVResultadoBomba";
+import type { SFVResultadoVariador } from "./sFVResultadoVariador";
 
 export interface SFVResultado {
   energiaDiariaKwh: number;
   potenciaDemandaKw: number;
+  anguloInclinacion?: number;
+  orientacion?: string;
   paneles: ResultadoPaneles;
   baterias?: ResultadoBaterias;
   inversor?: ResultadoInversor;
@@ -23,4 +28,7 @@ export interface SFVResultado {
   cableado: ResultadoCableado;
   protecciones?: ResultadoProtecciones;
   ambiental: ResultadoAmbiental;
+  economico?: ResultadoEconomico;
+  bomba?: SFVResultadoBomba;
+  variador?: SFVResultadoVariador;
 }

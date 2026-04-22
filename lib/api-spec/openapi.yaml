@@ -166,6 +166,34 @@ components:
           type: boolean
         horasBombeoManual:
           type: number
+        # Campos económicos
+        costoPorPanel:
+          type: number
+        costoInversor:
+          type: number
+        costoBaterias:
+          type: number
+        costoProtecciones:
+          type: number
+        costoInstalacion:
+          type: number
+        costoCableado:
+          type: number
+        costoBomba:
+          type: number
+        costoVariador:
+          type: number
+        precioKwh:
+          type: number
+        precioKwhConvencional:
+          type: number
+        tipoCombustible:
+          type: string
+          enum: ["electrico", "diesel"]
+        consumoDieselAnual:
+          type: number
+        precioDieselLitro:
+          type: number
       required:
         - latitud
         - longitud
@@ -291,6 +319,44 @@ components:
         - vectorAhorrosCo2
         - vectorDegradacion
 
+    ResultadoEconomico:
+      type: object
+      properties:
+        costoTotal:
+          type: number
+        precioKwh:
+          type: number
+        ahorroPrimerAnio:
+          type: number
+        ahorroTotal:
+          type: number
+        payback:
+          type: number
+          nullable: true
+        vectorAhorros:
+          type: array
+          items:
+            type: number
+        ahorrosAcumulados:
+          type: array
+          items:
+            type: number
+        flujoCaja:
+          type: array
+          items:
+            type: number
+        costoConvencional:
+          type: number
+      required:
+        - costoTotal
+        - ahorroPrimerAnio
+        - ahorroTotal
+        - payback
+        - vectorAhorros
+        - ahorrosAcumulados
+        - flujoCaja
+        - costoConvencional
+
     SFVResultado:
       type: object
       properties:
@@ -298,6 +364,10 @@ components:
           type: number
         potenciaDemandaKw:
           type: number
+        anguloInclinacion:
+          type: number
+        orientacion:
+          type: string
         paneles:
           $ref: "#/components/schemas/ResultadoPaneles"
         baterias:
@@ -312,6 +382,24 @@ components:
           $ref: "#/components/schemas/ResultadoProtecciones"
         ambiental:
           $ref: "#/components/schemas/ResultadoAmbiental"
+        economico:
+          $ref: "#/components/schemas/ResultadoEconomico"
+        bomba:
+          type: object
+          properties:
+            potenciaHP: { type: number }
+            potenciaKw: { type: number }
+            potenciaHidraulicaW: { type: number }
+            caudalM3s: { type: number }
+          required: [potenciaHP, potenciaKw, potenciaHidraulicaW, caudalM3s]
+        variador:
+          type: object
+          properties:
+            corrienteMaxima: { type: number }
+            tipo: { type: string }
+            compatible: { type: boolean }
+            voltajeNominal: { type: number }
+          required: [corrienteMaxima]
       required:
         - energiaDiariaKwh
         - potenciaDemandaKw

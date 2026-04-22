@@ -77,11 +77,26 @@ export const CalcularSFVBody = zod.object({
   alturaEncima: zod.number().optional().describe("Altura suelo → tanque [m]"),
   usarHspParaBombeo: zod.boolean().optional(),
   horasBombeoManual: zod.number().optional(),
+  costoPorPanel: zod.number().optional(),
+  costoInversor: zod.number().optional(),
+  costoBaterias: zod.number().optional(),
+  costoProtecciones: zod.number().optional(),
+  costoInstalacion: zod.number().optional(),
+  costoCableado: zod.number().optional(),
+  costoBomba: zod.number().optional(),
+  costoVariador: zod.number().optional(),
+  precioKwh: zod.number().optional(),
+  precioKwhConvencional: zod.number().optional(),
+  tipoCombustible: zod.enum(["electrico", "diesel"]).optional(),
+  consumoDieselAnual: zod.number().optional(),
+  precioDieselLitro: zod.number().optional(),
 });
 
 export const CalcularSFVResponse = zod.object({
   energiaDiariaKwh: zod.number(),
   potenciaDemandaKw: zod.number(),
+  anguloInclinacion: zod.number().optional(),
+  orientacion: zod.string().optional(),
   paneles: zod.object({
     totalPaneles: zod.number(),
     panelesSerie: zod.number(),
@@ -130,4 +145,33 @@ export const CalcularSFVResponse = zod.object({
     vectorAhorrosCo2: zod.array(zod.number()),
     vectorDegradacion: zod.array(zod.number()),
   }),
+  economico: zod
+    .object({
+      costoTotal: zod.number(),
+      precioKwh: zod.number().optional(),
+      ahorroPrimerAnio: zod.number(),
+      ahorroTotal: zod.number(),
+      payback: zod.number().nullable(),
+      vectorAhorros: zod.array(zod.number()),
+      ahorrosAcumulados: zod.array(zod.number()),
+      flujoCaja: zod.array(zod.number()),
+      costoConvencional: zod.number(),
+    })
+    .optional(),
+  bomba: zod
+    .object({
+      potenciaHP: zod.number(),
+      potenciaKw: zod.number(),
+      potenciaHidraulicaW: zod.number(),
+      caudalM3s: zod.number(),
+    })
+    .optional(),
+  variador: zod
+    .object({
+      corrienteMaxima: zod.number(),
+      tipo: zod.string().optional(),
+      compatible: zod.boolean().optional(),
+      voltajeNominal: zod.number().optional(),
+    })
+    .optional(),
 });
